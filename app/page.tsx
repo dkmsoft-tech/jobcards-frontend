@@ -4,8 +4,8 @@
 import { useState } from 'react';
 import { useAuth } from './AuthContext';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image'; // Import the Next.js Image component
-import React from 'react'; // Import React for types
+import Image from 'next/image';
+import React from 'react';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -19,9 +19,8 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // NOTE: This fetch call targets your production domain.
-      // For local development, you might switch between this and http://localhost:3001
-      const response = await fetch('https://jobcards.dkm.gov.za/api/auth/login', {
+      // The URL was missing the '/api' prefix. This is the corrected URL.
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: username, password }),
@@ -41,7 +40,7 @@ export default function LoginPage() {
     }
   };
 
-  // Basic styling for the component with TypeScript types
+  // Styles remain the same
   const styles: { [key: string]: React.CSSProperties } = {
     container: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#f0f2f5' },
     form: { display: 'flex', flexDirection: 'column', padding: '40px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', width: '300px', alignItems: 'center' },
@@ -54,7 +53,7 @@ export default function LoginPage() {
     <div style={styles.container}>
       <form onSubmit={handleSubmit} style={styles.form}>
         <Image
-          src="/logo-dkm.png"
+          src="/dkm-logo.png"
           alt="DKM Logo"
           width={100}
           height={100}
