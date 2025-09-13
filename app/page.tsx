@@ -1,46 +1,42 @@
 // app/page.js
-'use client'; // This directive tells Next.js this is a client-side component
+'use client';
 
 import { useState } from 'react';
+import { useAuth } from './AuthContext'; // Import the useAuth hook
+import { useRouter } from 'next/navigation'; // Import the router
 
 export default function LoginPage() {
-  // State variables to hold the username and password
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const { login } = useAuth(); // Get the login function from context
+  const router = useRouter(); // Initialize the router
 
-  // This function is called when the form is submitted
   const handleSubmit = async (event) => {
-    event.preventDefault(); // Prevent the default form submission behavior
-    setError(''); // Clear any previous errors
+    event.preventDefault();
+    setError('');
 
     try {
       const response = await fetch('https://jobcards.dkm.gov.za/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: username, password }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        // SUCCESS: In a real app, you'd save the token and redirect
-        alert('Login Successful! Token: ' + data.token);
-        // For example: localStorage.setItem('token', data.token);
-        // window.location.href = '/dashboard';
+        login(data.token); // Use the login function to save the token
+        router.push('/dashboard'); // Redirect to the dashboard
       } else {
-        // Handle server-side errors (e.g., wrong password)
         const errorData = await response.json();
-        setError(errorData.message || 'Login failed. Please try again.');
+        setError(errorData.message || 'Login failed.');
       }
     } catch (err) {
-      // Handle network errors (e.g., API server is down)
-      setError('A network error occurred. Please try again later.');
+      setError('A network error occurred.');
     }
   };
 
-  // Basic styling for the component
+  // Styling (same as before)
   const styles = {
     container: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#f0f2f5' },
     form: { display: 'flex', flexDirection: 'column', padding: '40px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', width: '300px' },
