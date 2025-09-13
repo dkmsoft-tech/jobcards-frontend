@@ -1,18 +1,18 @@
-// app/page.js
+// app/page.tsx
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from './AuthContext'; // Import the useAuth hook
-import { useRouter } from 'next/navigation'; // Import the router
+import { useAuth } from './AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login } = useAuth(); // Get the login function from context
-  const router = useRouter(); // Initialize the router
+  const { login } = useAuth();
+  const router = useRouter();
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: React.FormEvent) => { // Add type for the event
     event.preventDefault();
     setError('');
 
@@ -25,19 +25,21 @@ export default function LoginPage() {
 
       if (response.ok) {
         const data = await response.json();
-        login(data.token); // Use the login function to save the token
-        router.push('/dashboard'); // Redirect to the dashboard
+        login(data.token);
+        router.push('/dashboard');
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Login failed.');
       }
     } catch (err) {
+      // Use the 'err' variable by logging it to the console
+      console.error('An error occurred during login:', err);
       setError('A network error occurred.');
     }
   };
 
   // Styling (same as before)
-  const styles = {
+  const styles: { [key: string]: React.CSSProperties } = { // Add type for styles
     container: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#f0f2f5' },
     form: { display: 'flex', flexDirection: 'column', padding: '40px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', width: '300px' },
     input: { marginBottom: '15px', padding: '10px', fontSize: '16px', border: '1px solid #ccc', borderRadius: '4px' },

@@ -1,32 +1,21 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { AuthProvider } from './AuthContext'; // Import the AuthProvider
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// app/layout.tsx
+import React from 'react'; // Import React
+import { AuthProvider } from './AuthContext';
 
 export const metadata = {
   title: 'Jobcards DKM',
   description: 'Jobcard Management System',
 };
 
-export default function RootLayout({ children }) {
+// Add the type definition for the 'children' prop
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <AuthProvider> {/* Wrap your app with the provider */}
+        <AuthProvider>
           {children}
         </AuthProvider>
       </body>
     </html>
   );
 }
-
