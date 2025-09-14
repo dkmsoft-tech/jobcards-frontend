@@ -1,17 +1,21 @@
 // app/layout.tsx
-import React from 'react'; // Import React
+import React from 'react';
 import { AuthProvider } from './AuthContext';
+import { Inter } from 'next/font/google'; // 1. Import the font
+
+// 2. Initialize the font with the 'latin' subset
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'Jobcards DKM',
   description: 'Jobcard Management System',
 };
 
-// Add the type definition for the 'children' prop
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      {/* 3. Apply the font's className to the body */}
+      <body className={inter.className}> 
         <AuthProvider>
           {children}
         </AuthProvider>
