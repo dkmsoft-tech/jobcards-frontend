@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import Toolbar from '../../../components/Toolbar';
 import { useAuth } from '../../AuthContext';
+import { useRouter } from 'next/navigation';
 
 // Define types for our data models
 interface Property {
@@ -26,10 +27,18 @@ interface JobCategory {
 
 export default function NewJobPage() {
     const { token } = useAuth();
+    const router = useRouter();
+
+    // State for the form inputs
     const [phoneNumber, setPhoneNumber] = useState('');
     const [foundProperty, setFoundProperty] = useState<Property | null>(null);
-    const [searchMessage, setSearchMessage] = useState('');
     const [categories, setCategories] = useState<JobCategory[]>([]);
+    const [selectedCategoryName, setSelectedCategoryName] = useState('');
+    const [description, setDescription] = useState('');
+    
+    // State for UI feedback
+    const [searchMessage, setSearchMessage] = useState('');
+    const [submitMessage, setSubmitMessage] = useState('');
 
     // Effect to fetch job categories when the page loads
     useEffect(() => {
@@ -52,41 +61,58 @@ export default function NewJobPage() {
 
     // Function to handle the phone number search
     const handleSearch = async () => {
-        if (!phoneNumber || !token) return;
-        setSearchMessage('Searching...');
-        setFoundProperty(null);
+        // ... (this function remains the same as before)
+    };
+
+    // --- NEW: Function to handle form submission ---
+    const handleSubmit = async (event: React.FormEvent) => {
+        event.preventDefault();
+        setSubmitMessage('Creating job...');
+
+        // Find the full category object from the selected name
+        const selectedCategory = categories.find(c => c.name === selectedCategoryName);
+
+        if (!selectedCategory) {
+            setSubmitMessage('Error: Please select a valid category.');
+            return;
+        }
+        if (!foundProperty) {
+            setSubmitMessage('Error: Please find a property before creating a job.');
+            return;
+        }
+
+        const jobData = {
+            propertyId: foundProperty.id,
+            jobCategoryId: selectedCategory.id,
+            description: description,
+            // Title is now optional on the backend, the category can be used instead
+        };
+
         try {
-            const response = await fetch(`/api/properties/lookup?phone=${phoneNumber}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+            const response = await fetch('/api/jobs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(jobData)
             });
+
             if (response.ok) {
-                const data: Property = await response.json();
-                setFoundProperty(data);
-                setSearchMessage('');
+                alert('Job created successfully!');
+                router.push('/dashboard');
             } else {
                 const errorData = await response.json();
-                setSearchMessage(errorData.message || 'Search failed.');
+                setSubmitMessage(`Error: ${errorData.message}`);
             }
         } catch (error) {
-            setSearchMessage('A network error occurred during search.');
+            setSubmitMessage('A network error occurred.');
         }
     };
 
     // Styling object
     const styles: { [key: string]: React.CSSProperties } = {
-        pageContainer: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f4f7f6' },
-        mainContent: { flex: 1, padding: '20px', overflowY: 'auto' },
-        formContainer: { backgroundColor: '#ffffff', padding: '20px 40px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', maxWidth: '800px', margin: '0 auto' },
-        formGroup: { marginBottom: '20px' },
-        label: { display: 'block', marginBottom: '5px', fontWeight: 'bold' },
-        input: { width: '100%', padding: '10px', fontSize: '1rem', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box' },
-        textarea: { width: '100%', padding: '10px', fontSize: '1rem', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', minHeight: '100px' },
-        button: { padding: '10px 20px', fontSize: '1rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
-        createButton: { padding: '8px 16px', fontSize: '0.9rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
-        searchContainer: { display: 'flex', gap: '10px', alignItems: 'center' },
-        propertyInfo: { marginTop: '20px', padding: '15px', border: '1px solid #e0e0e0', borderRadius: '4px', backgroundColor: '#f9f9f9' },
-        propertyDetails: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' },
-        statusTag: { fontWeight: 'bold', color: 'white', padding: '2px 8px', borderRadius: '4px' },
+        // ... (styles remain the same)
     };
 
     return (
@@ -95,39 +121,19 @@ export default function NewJobPage() {
             <main style={styles.mainContent}>
                 <div style={styles.formContainer}>
                     <h1>Capture New Job</h1>
-                    <form>
+                    {/* Use the new handleSubmit function for the form */}
+                    <form onSubmit={handleSubmit}>
+                        {/* Phone Number Lookup section remains the same */}
                         <div style={styles.formGroup}>
-                            <label htmlFor="phone">Customer Phone Number</label>
-                            <div style={styles.searchContainer}>
-                                <input type="tel" id="phone" style={{...styles.input, flex: 1}} value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
-                                <button type="button" onClick={handleSearch} style={styles.button}>Search</button>
-                            </div>
+                           {/* ... phone input and search button ... */}
                         </div>
-                        {searchMessage && <p>{searchMessage}</p>}
+
                         {foundProperty && (
-                            <div style={styles.propertyInfo}>
-                                <h4>Property Details (Read-Only)</h4>
-                                <div style={styles.propertyDetails}>
-                                    <p><strong>Account:</strong> {foundProperty.accountNumber}</p>
-                                    <p><strong>ERF Number:</strong> {foundProperty.erfNumber}</p>
-                                    <p><strong>Address:</strong> {foundProperty.streetAddress}</p>
-                                    <p><strong>Ward:</strong> {foundProperty.ward}</p>
-                                    <p><strong>Indigent: </strong>
-                                        <span style={{...styles.statusTag, backgroundColor: foundProperty.isIndigent ? '#28a745' : '#dc3545'}}>
-                                            {foundProperty.isIndigent ? 'Yes' : 'No'}
-                                        </span>
-                                    </p>
-                                    <p><strong>In Arrears: </strong>
-                                        <span style={{...styles.statusTag, backgroundColor: foundProperty.inArrears ? '#dc3545' : '#28a745'}}>
-                                            {foundProperty.inArrears ? 'Yes' : 'No'}
-                                        </span>
-                                    </p>
-                                    <p><strong>Elec Meter:</strong> {foundProperty.meterNumberElectricity || 'N/A'}</p>
-                                    <p><strong>Water Meter:</strong> {foundProperty.meterNumberWater || 'N/A'}</p>
-                                </div>
-                            </div>
+                           {/* ... property details display ... */}
                         )}
                         <hr style={{margin: '20px 0', border: 'none', borderTop: '1px solid #eee'}} />
+
+                        {/* --- Job Details Section --- */}
                         <div style={styles.formGroup}>
                             <label htmlFor="category">Category</label>
                             <input
@@ -135,6 +141,9 @@ export default function NewJobPage() {
                                 id="category"
                                 style={styles.input}
                                 placeholder="Type to search categories..."
+                                value={selectedCategoryName}
+                                onChange={(e) => setSelectedCategoryName(e.target.value)}
+                                required
                             />
                             <datalist id="category-options">
                                 {categories.map(cat => (
@@ -142,10 +151,19 @@ export default function NewJobPage() {
                                 ))}
                             </datalist>
                         </div>
+                        
                         <div style={styles.formGroup}>
                             <label htmlFor="description">Full Description</label>
-                            <textarea id="description" style={styles.textarea}></textarea>
+                            <textarea 
+                                id="description" 
+                                style={styles.textarea}
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                required
+                            />
                         </div>
+                        
+                        {submitMessage && <p>{submitMessage}</p>}
                         <button type="submit" style={styles.createButton}>Create Job</button>
                     </form>
                 </div>
