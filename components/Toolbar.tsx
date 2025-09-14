@@ -45,7 +45,7 @@ export default function Toolbar() {
       
       {/* 3. Add the logo on the right side */}
       <Image
-        src="/logo-dkm.png"
+        src="/dkm-logo.png"
         alt="DKM Logo"
         width={40}
         height={40}
