@@ -84,17 +84,24 @@ export default function NewJobPage() {
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         setSubmitMessage('Creating job...');
+
         const selectedCategory = categories.find(c => c.name === selectedCategoryName);
-        if (!selectedCategory || !foundProperty) {
+        
+        // --- THIS IS THE FIX ---
+        // Use 'selectedProperty' instead of the old 'foundProperty'
+        if (!selectedCategory || !selectedProperty) {
             setSubmitMessage('Error: A property and category must be selected.');
             return;
         }
+
         const jobData = {
-            propertyId: foundProperty.id,
+            // Use 'selectedProperty.id' here as well
+            propertyId: selectedProperty.id,
             jobCategoryId: selectedCategory.id,
             description: description,
             complainantPhoneNumber: complainantPhoneNumber,
         };
+
         try {
             const response = await fetch('/api/jobs', {
                 method: 'POST',
@@ -194,7 +201,6 @@ export default function NewJobPage() {
                         
                         <fieldset disabled={!selectedProperty} style={{border: 'none', padding: 0, margin: 0}}>
                             <div style={styles.formGroup}>
-                                {/* This is the corrected line */}
                                 <label htmlFor="complainantPhone">Complainant&apos;s Phone Number (if different)</label>
                                 <input type="tel" id="complainantPhone" style={styles.input} value={complainantPhoneNumber} onChange={(e) => setComplainantPhoneNumber(e.target.value)} />
                             </div>
