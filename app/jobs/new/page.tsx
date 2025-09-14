@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import Toolbar from '../../../components/Toolbar';
 import { useAuth } from '../../AuthContext';
 
-// Define types for the data we'll be handling
+// Define types for our data models
 interface Property {
   id: number;
   accountNumber: string;
@@ -31,7 +31,7 @@ export default function NewJobPage() {
     const [searchMessage, setSearchMessage] = useState('');
     const [categories, setCategories] = useState<JobCategory[]>([]);
 
-    // --- Fetch Job Categories on Page Load ---
+    // Effect to fetch job categories when the page loads
     useEffect(() => {
         const fetchCategories = async () => {
             if (!token) return;
@@ -50,6 +50,7 @@ export default function NewJobPage() {
         fetchCategories();
     }, [token]);
 
+    // Function to handle the phone number search
     const handleSearch = async () => {
         if (!phoneNumber || !token) return;
         setSearchMessage('Searching...');
@@ -71,6 +72,7 @@ export default function NewJobPage() {
         }
     };
 
+    // Styling object
     const styles: { [key: string]: React.CSSProperties } = {
         pageContainer: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f4f7f6' },
         mainContent: { flex: 1, padding: '20px', overflowY: 'auto' },
@@ -84,7 +86,7 @@ export default function NewJobPage() {
         searchContainer: { display: 'flex', gap: '10px', alignItems: 'center' },
         propertyInfo: { marginTop: '20px', padding: '15px', border: '1px solid #e0e0e0', borderRadius: '4px', backgroundColor: '#f9f9f9' },
         propertyDetails: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' },
-        indigentStatus: { fontWeight: 'bold', color: 'white', padding: '2px 8px', borderRadius: '4px' },
+        statusTag: { fontWeight: 'bold', color: 'white', padding: '2px 8px', borderRadius: '4px' },
     };
 
     return (
@@ -104,19 +106,19 @@ export default function NewJobPage() {
                         {searchMessage && <p>{searchMessage}</p>}
                         {foundProperty && (
                             <div style={styles.propertyInfo}>
-                                <h4>Property Details</h4>
+                                <h4>Property Details (Read-Only)</h4>
                                 <div style={styles.propertyDetails}>
                                     <p><strong>Account:</strong> {foundProperty.accountNumber}</p>
                                     <p><strong>ERF Number:</strong> {foundProperty.erfNumber}</p>
                                     <p><strong>Address:</strong> {foundProperty.streetAddress}</p>
                                     <p><strong>Ward:</strong> {foundProperty.ward}</p>
                                     <p><strong>Indigent: </strong>
-                                        <span style={{...styles.indigentStatus, backgroundColor: foundProperty.isIndigent ? 'green' : 'red'}}>
+                                        <span style={{...styles.statusTag, backgroundColor: foundProperty.isIndigent ? '#28a745' : '#dc3545'}}>
                                             {foundProperty.isIndigent ? 'Yes' : 'No'}
                                         </span>
                                     </p>
                                     <p><strong>In Arrears: </strong>
-                                        <span style={{...styles.indigentStatus, backgroundColor: foundProperty.inArrears ? 'red' : 'green'}}>
+                                        <span style={{...styles.statusTag, backgroundColor: foundProperty.inArrears ? '#dc3545' : '#28a745'}}>
                                             {foundProperty.inArrears ? 'Yes' : 'No'}
                                         </span>
                                     </p>
@@ -139,10 +141,6 @@ export default function NewJobPage() {
                                     <option key={cat.id} value={cat.name} />
                                 ))}
                             </datalist>
-                        </div>
-                        <div style={styles.formGroup}>
-                            <label htmlFor="title">Title / Short Description</label>
-                            <input type="text" id="title" style={styles.input} />
                         </div>
                         <div style={styles.formGroup}>
                             <label htmlFor="description">Full Description</label>
