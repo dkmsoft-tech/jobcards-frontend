@@ -50,7 +50,7 @@ export default function Dashboard() {
 
   const styles: { [key: string]: React.CSSProperties } = {
     dashboardContainer: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f4f7f6' },
-    mainContent: { flex: 1, padding: '20px', boxSizing: 'border-box' }, // Added boxSizing
+    mainContent: { flex: 1, padding: '20px', boxSizing: 'border-box' },
     statsContainer: { display: 'flex', gap: '20px', marginBottom: '20px' },
     jobListContainer: { backgroundColor: '#ffffff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
   };
@@ -63,7 +63,8 @@ export default function Dashboard() {
         <div style={styles.statsContainer}>
           <StatCard title="Pending" value={pendingJobs} />
           <StatCard title="On Site" value={onSiteJobs} />
-          <StatCard title="Completed" aue={completedJobs} />
+          {/* The prop was accidentally named 'aue', it has been corrected to 'value' */}
+          <StatCard title="Completed" value={completedJobs} />
         </div>
         <div style={styles.jobListContainer}>
           <h2>Recent Jobs</h2>
