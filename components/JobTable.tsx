@@ -2,18 +2,9 @@
 'use client';
 
 import React from 'react';
-import { Job } from '../types'; // 1. Import the shared Job type
+import { Job } from '../types'; // 1. Import the shared, correct Job type
 
-// Define the shape of the Job object this component expects
-// It includes nested objects for related data
-interface Job {
-  id: number;
-  referenceNumber: string; // <-- NEW
-  status: 'Pending' | 'On-Site' | 'Completed' | 'On Hold';
-  createdAt: string;
-  Property: { streetAddress: string; } | null;
-  JobCategory: { name: string; } | null;
-}
+// 2. The old, local interface that was here has been DELETED.
 
 interface JobTableProps {
   jobs: Job[];
@@ -41,7 +32,6 @@ export default function JobTable({ jobs }: JobTableProps) {
     }
   };
 
-
   const getStatusColor = (status: Job['status']) => {
     switch (status) {
       case 'Pending': return '#ffc107'; // Yellow
@@ -66,7 +56,8 @@ export default function JobTable({ jobs }: JobTableProps) {
       <tbody>
         {jobs.map(job => (
           <tr key={job.id}>
-            <td style={styles.td}>{job.referenceNumber || job.id}</td>
+            {/* 3. This now safely handles cases where referenceNumber is null */}
+            <td style={styles.td}>{job.referenceNumber || `ID: ${job.id}`}</td>
             <td style={styles.td}>{job.JobCategory?.name || 'N/A'}</td>
             <td style={styles.td}>{job.Property?.streetAddress || 'N/A'}</td>
             <td style={styles.td}>
