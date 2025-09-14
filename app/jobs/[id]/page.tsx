@@ -2,9 +2,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../../AuthContext';
-import Toolbar from '../../../../components/Toolbar';
-import { Job } from '../../../../types'; // We need a more detailed Job type
+import { useAuth } from '../../AuthContext'; // Corrected path
+import Toolbar from '../../../components/Toolbar'; // Corrected path
+import { Job } from '../../../types'; // Corrected path
 import { useRouter } from 'next/navigation';
 
 // A more detailed Property interface for this page
@@ -53,6 +53,7 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
                 const data = await response.json();
                 setJob(data);
             } catch (err) {
+                console.error("Error fetching details:", err);
                 setError('Could not load job details.');
             } finally {
                 setLoading(false);
