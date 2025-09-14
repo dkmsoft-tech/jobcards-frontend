@@ -29,18 +29,15 @@ export default function NewJobPage() {
     const { token } = useAuth();
     const router = useRouter();
 
-    // State for the form inputs
     const [phoneNumber, setPhoneNumber] = useState('');
     const [foundProperty, setFoundProperty] = useState<Property | null>(null);
     const [categories, setCategories] = useState<JobCategory[]>([]);
     const [selectedCategoryName, setSelectedCategoryName] = useState('');
     const [description, setDescription] = useState('');
     
-    // State for UI feedback
     const [searchMessage, setSearchMessage] = useState('');
     const [submitMessage, setSubmitMessage] = useState('');
 
-    // Effect to fetch job categories when the page loads
     useEffect(() => {
         const fetchCategories = async () => {
             if (!token) return;
@@ -59,7 +56,6 @@ export default function NewJobPage() {
         fetchCategories();
     }, [token]);
 
-    // Function to handle the phone number search
     const handleSearch = async () => {
         if (!phoneNumber || !token) return;
         setSearchMessage('Searching...');
@@ -77,11 +73,11 @@ export default function NewJobPage() {
                 setSearchMessage(errorData.message || 'Search failed.');
             }
         } catch (error) {
+            console.error("Search network error:", error);
             setSearchMessage('A network error occurred during search.');
         }
     };
 
-    // Function to handle form submission
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         setSubmitMessage('Creating job...');
@@ -126,7 +122,6 @@ export default function NewJobPage() {
         }
     };
 
-    // Styling object
     const styles: { [key: string]: React.CSSProperties } = {
         pageContainer: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f4f7f6' },
         mainContent: { flex: 1, padding: '20px', overflowY: 'auto' },
@@ -153,7 +148,14 @@ export default function NewJobPage() {
                         <div style={styles.formGroup}>
                             <label htmlFor="phone">Customer Phone Number</label>
                             <div style={styles.searchContainer}>
-                                <input type="tel" id="phone" style={{...styles.input, flex: 1}} value={phoneNumber} onChange={(e) => setPhoneNumber(e.g.value)} />
+                                <input 
+                                  type="tel" 
+                                  id="phone" 
+                                  style={{...styles.input, flex: 1}} 
+                                  value={phoneNumber}
+                                  // This is the corrected line
+                                  onChange={(e) => setPhoneNumber(e.target.value)} 
+                                />
                                 <button type="button" onClick={handleSearch} style={styles.button}>Search</button>
                             </div>
                         </div>
