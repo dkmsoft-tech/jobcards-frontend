@@ -2,17 +2,24 @@
 'use client';
 
 import React from 'react';
-import { Job } from '../types'; // 1. Import the shared, correct Job type
-
-// 2. The old, local interface that was here has been DELETED.
+import { Job } from '../types';
+import { useRouter } from 'next/navigation';
 
 interface JobTableProps {
   jobs: Job[];
 }
 
 export default function JobTable({ jobs }: JobTableProps) {
+  const router = useRouter();
+
+  // This function will be called when a user clicks on a table row
+  const handleRowClick = (jobId: number) => {
+    router.push(`/jobs/${jobId}`);
+  };
+
   const styles: { [key: string]: React.CSSProperties } = {
     table: { width: '100%', borderCollapse: 'collapse', backgroundColor: '#ffffff' },
+    tr: { cursor: 'pointer' }, // Make the row look clickable
     th: {
       padding: '12px 15px',
       textAlign: 'left',
@@ -55,8 +62,8 @@ export default function JobTable({ jobs }: JobTableProps) {
       </thead>
       <tbody>
         {jobs.map(job => (
-          <tr key={job.id}>
-            {/* 3. This now safely handles cases where referenceNumber is null */}
+          // Add the onClick handler to each table row
+          <tr key={job.id} onClick={() => handleRowClick(job.id)} style={styles.tr}>
             <td style={styles.td}>{job.referenceNumber || `ID: ${job.id}`}</td>
             <td style={styles.td}>{job.JobCategory?.name || 'N/A'}</td>
             <td style={styles.td}>{job.Property?.streetAddress || 'N/A'}</td>
