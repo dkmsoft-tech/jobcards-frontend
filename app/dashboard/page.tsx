@@ -7,23 +7,10 @@ import { useAuth } from '../AuthContext';
 import { useRouter } from 'next/navigation';
 import Toolbar from '../../components/Toolbar';
 import StatCard from '../../components/StatCard';
-import JobTable from '../../components/JobTable'; // 1. Import the new JobTable component
-import { Job } from '../../types'; // 1. Import the shared Job type
+import JobTable from '../../components/JobTable';
+import { Job } from '../../types'; // Import the shared Job type
 
-
-// 2. Define a more detailed Job interface to match the API response
-interface Job {
-  id: number;
-  description: string;
-  status: 'Pending' | 'On-Site' | 'Completed' | 'On Hold';
-  createdAt: string;
-  Property: {
-    streetAddress: string;
-  } | null;
-  JobCategory: {
-    name: string;
-  } | null;
-}
+// The old, local interface that was here has been DELETED.
 
 export default function Dashboard() {
   const { token, logout } = useAuth();
@@ -41,6 +28,11 @@ export default function Dashboard() {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) {
+          // This will log out the user if the token is invalid/expired
+          if (response.status === 403 || response.status === 401) {
+            logout();
+            router.push('/');
+          }
           throw new Error('Failed to fetch jobs');
         }
         const data: Job[] = await response.json();
@@ -52,13 +44,13 @@ export default function Dashboard() {
     fetchJobs();
   }, [token, router, logout]);
 
-  // The logic for calculating stats remains the same
+  // Stats calculations
   const totalJobs = jobs.length;
   const pendingJobs = jobs.filter(job => job.status === 'Pending').length;
   const onSiteJobs = jobs.filter(job => job.status === 'On-Site').length;
   const completedJobs = jobs.filter(job => job.status === 'Completed').length;
 
-  // The styles object also remains the same
+  // Styles
   const styles: { [key: string]: React.CSSProperties } = {
     dashboardContainer: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f4f7f6' },
     mainContent: { flex: 1, padding: '20px', boxSizing: 'border-box', overflowY: 'auto' },
@@ -84,7 +76,6 @@ export default function Dashboard() {
             <h2>Recent Jobs</h2>
             <Link href="/jobs/new" style={styles.createJobButton}>Create New Job</Link>
           </div>
-          {/* 3. Replace the simple list with our new JobTable component */}
           {jobs.length > 0 ? (
             <JobTable jobs={jobs} />
           ) : (
