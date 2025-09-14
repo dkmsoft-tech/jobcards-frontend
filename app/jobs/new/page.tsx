@@ -1,13 +1,12 @@
 // app/jobs/new/page.tsx
 'use client';
 
-// This line had a typo. "antd" has been removed.
 import React, { useState, useEffect } from 'react';
 import Toolbar from '../../../components/Toolbar';
 import { useAuth } from '../../AuthContext';
 import { useRouter } from 'next/navigation';
 
-// Define the shape of a Property object with all details
+// Interfaces for our data
 interface Property {
   id: number;
   accountNumber: string;
@@ -19,33 +18,27 @@ interface Property {
   meterNumberWater: string | null;
   inArrears: boolean | null;
 }
-
-// Define the shape of a Job Category object
-interface JobCategory {
-  id: number;
-  name: string;
-}
+interface JobCategory { id: number; name: string; }
 
 export default function NewJobPage() {
     const { token } = useAuth();
     const router = useRouter();
 
-    // State for user inputs
+    // State for inputs
     const [lookupQuery, setLookupQuery] = useState('');
     const [complainantPhoneNumber, setComplainantPhoneNumber] = useState('');
     const [selectedCategoryName, setSelectedCategoryName] = useState('');
     const [description, setDescription] = useState('');
 
-    // State for data fetched from the API
+    // State for data
     const [searchResults, setSearchResults] = useState<Property[]>([]);
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
     const [categories, setCategories] = useState<JobCategory[]>([]);
     
-    // State for UI messages and feedback
+    // State for UI feedback
     const [searchMessage, setSearchMessage] = useState('');
     const [submitMessage, setSubmitMessage] = useState('');
 
-    // Effect to fetch job categories when the page loads
     useEffect(() => {
         const fetchCategories = async () => {
             if (!token) return;
@@ -64,12 +57,11 @@ export default function NewJobPage() {
         fetchCategories();
     }, [token]);
 
-    // Function to handle the property lookup
     const handleSearch = async () => {
         if (!lookupQuery || !token) return;
         setSearchMessage('Searching...');
         setSearchResults([]);
-        setSelectedProperty(null); // Clear any previous selection
+        setSelectedProperty(null);
         try {
             const response = await fetch(`/api/properties/lookup?query=${lookupQuery}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -88,29 +80,21 @@ export default function NewJobPage() {
             setSearchMessage('A network error occurred during search.');
         }
     };
-
-    // Function to handle the final form submission
+    
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         setSubmitMessage('Creating job...');
-
         const selectedCategory = categories.find(c => c.name === selectedCategoryName);
-        if (!selectedCategory) {
-            setSubmitMessage('Error: Please select a valid category.');
+        if (!selectedCategory || !foundProperty) {
+            setSubmitMessage('Error: A property and category must be selected.');
             return;
         }
-        if (!selectedProperty) {
-            setSubmitMessage('Error: Please select a property from the search results before creating a job.');
-            return;
-        }
-
         const jobData = {
-            propertyId: selectedProperty.id,
+            propertyId: foundProperty.id,
             jobCategoryId: selectedCategory.id,
             description: description,
             complainantPhoneNumber: complainantPhoneNumber,
         };
-
         try {
             const response = await fetch('/api/jobs', {
                 method: 'POST',
@@ -133,7 +117,6 @@ export default function NewJobPage() {
         }
     };
 
-    // Styling object for the component
     const styles: { [key: string]: React.CSSProperties } = {
         pageContainer: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f4f7f6' },
         mainContent: { flex: 1, padding: '20px', overflowY: 'auto' },
@@ -211,7 +194,8 @@ export default function NewJobPage() {
                         
                         <fieldset disabled={!selectedProperty} style={{border: 'none', padding: 0, margin: 0}}>
                             <div style={styles.formGroup}>
-                                <label htmlFor="complainantPhone">Complainant's Phone Number (if different)</label>
+                                {/* This is the corrected line */}
+                                <label htmlFor="complainantPhone">Complainant&apos;s Phone Number (if different)</label>
                                 <input type="tel" id="complainantPhone" style={styles.input} value={complainantPhoneNumber} onChange={(e) => setComplainantPhoneNumber(e.target.value)} />
                             </div>
                             
