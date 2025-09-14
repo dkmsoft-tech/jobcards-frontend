@@ -1,7 +1,8 @@
 // app/jobs/new/page.tsx
 'use client';
 
-import React, antd { useState, useEffect } from 'react';
+// This line had a typo. "antd" has been removed.
+import React, { useState, useEffect } from 'react';
 import Toolbar from '../../../components/Toolbar';
 import { useAuth } from '../../AuthContext';
 import { useRouter } from 'next/navigation';
@@ -159,7 +160,6 @@ export default function NewJobPage() {
                 <div style={styles.formContainer}>
                     <h1>Capture New Job</h1>
                     <form onSubmit={handleSubmit}>
-                        {/* --- PROPERTY LOOKUP --- */}
                         <div style={styles.formGroup}>
                             <label htmlFor="lookup">Lookup by Phone, ERF, Address, or Account No.</label>
                             <div style={styles.searchContainer}>
@@ -169,7 +169,6 @@ export default function NewJobPage() {
                         </div>
                         {searchMessage && <p>{searchMessage}</p>}
                         
-                        {/* --- SEARCH RESULTS LIST --- */}
                         {searchResults.length > 0 && !selectedProperty && (
                             <div style={styles.resultsContainer}>
                                 {searchResults.map(prop => (
@@ -184,7 +183,6 @@ export default function NewJobPage() {
                             </div>
                         )}
 
-                        {/* --- SELECTED PROPERTY DISPLAY --- */}
                         {selectedProperty && (
                             <div style={styles.propertyInfo}>
                                 <h4>Selected Property</h4>
@@ -211,7 +209,6 @@ export default function NewJobPage() {
 
                         <hr style={{margin: '20px 0', border: 'none', borderTop: '1px solid #eee'}} />
                         
-                        {/* The rest of the form is disabled until a property is selected */}
                         <fieldset disabled={!selectedProperty} style={{border: 'none', padding: 0, margin: 0}}>
                             <div style={styles.formGroup}>
                                 <label htmlFor="complainantPhone">Complainant's Phone Number (if different)</label>
