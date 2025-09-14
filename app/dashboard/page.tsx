@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation';
 import Toolbar from '../../components/Toolbar';
 import StatCard from '../../components/StatCard';
 import JobTable from '../../components/JobTable'; // 1. Import the new JobTable component
+import { Job } from '../../types'; // 1. Import the shared Job type
+
 
 // 2. Define a more detailed Job interface to match the API response
 interface Job {
@@ -28,7 +30,6 @@ export default function Dashboard() {
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
 
-  // The useEffect hook for fetching jobs remains the same
   useEffect(() => {
     if (!token) {
       router.push('/');
