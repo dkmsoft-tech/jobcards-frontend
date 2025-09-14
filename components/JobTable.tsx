@@ -7,20 +7,14 @@ import React from 'react';
 // It includes nested objects for related data
 interface Job {
   id: number;
-  description: string;
+  referenceNumber: string; // <-- NEW
   status: 'Pending' | 'On-Site' | 'Completed' | 'On Hold';
   createdAt: string;
-  Property: {
-    streetAddress: string;
-  } | null;
-  JobCategory: {
-    name: string;
-  } | null;
+  Property: { streetAddress: string; } | null;
+  JobCategory: { name: string; } | null;
 }
+interface JobTableProps { jobs: Job[]; }
 
-interface JobTableProps {
-  jobs: Job[];
-}
 
 export default function JobTable({ jobs }: JobTableProps) {
   const styles: { [key: string]: React.CSSProperties } = {
@@ -54,11 +48,11 @@ export default function JobTable({ jobs }: JobTableProps) {
     }
   };
 
-  return (
+return (
     <table style={styles.table}>
       <thead>
         <tr>
-          <th style={styles.th}>Job ID</th>
+          <th style={styles.th}>Reference #</th> {/* Changed Header */}
           <th style={styles.th}>Category</th>
           <th style={styles.th}>Address</th>
           <th style={styles.th}>Status</th>
@@ -68,7 +62,8 @@ export default function JobTable({ jobs }: JobTableProps) {
       <tbody>
         {jobs.map(job => (
           <tr key={job.id}>
-            <td style={styles.td}>{job.id}</td>
+            {/* --- DISPLAY THE NEW REFERENCE NUMBER --- */}
+            <td style={styles.td}>{job.referenceNumber || job.id}</td>
             <td style={styles.td}>{job.JobCategory?.name || 'N/A'}</td>
             <td style={styles.td}>{job.Property?.streetAddress || 'N/A'}</td>
             <td style={styles.td}>
