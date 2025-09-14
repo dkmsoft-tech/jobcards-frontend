@@ -1,12 +1,12 @@
 // app/jobs/new/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, antd { useState, useEffect } from 'react';
 import Toolbar from '../../../components/Toolbar';
 import { useAuth } from '../../AuthContext';
 import { useRouter } from 'next/navigation';
 
-// Define types for our data models
+// Define the shape of a Property object with all details
 interface Property {
   id: number;
   accountNumber: string;
@@ -19,25 +19,32 @@ interface Property {
   inArrears: boolean | null;
 }
 
+// Define the shape of a Job Category object
 interface JobCategory {
   id: number;
   name: string;
-  visibility: 'Public' | 'Internal';
 }
 
 export default function NewJobPage() {
     const { token } = useAuth();
     const router = useRouter();
 
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [foundProperty, setFoundProperty] = useState<Property | null>(null);
-    const [categories, setCategories] = useState<JobCategory[]>([]);
+    // State for user inputs
+    const [lookupQuery, setLookupQuery] = useState('');
+    const [complainantPhoneNumber, setComplainantPhoneNumber] = useState('');
     const [selectedCategoryName, setSelectedCategoryName] = useState('');
     const [description, setDescription] = useState('');
+
+    // State for data fetched from the API
+    const [searchResults, setSearchResults] = useState<Property[]>([]);
+    const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+    const [categories, setCategories] = useState<JobCategory[]>([]);
     
+    // State for UI messages and feedback
     const [searchMessage, setSearchMessage] = useState('');
     const [submitMessage, setSubmitMessage] = useState('');
 
+    // Effect to fetch job categories when the page loads
     useEffect(() => {
         const fetchCategories = async () => {
             if (!token) return;
@@ -56,21 +63,24 @@ export default function NewJobPage() {
         fetchCategories();
     }, [token]);
 
+    // Function to handle the property lookup
     const handleSearch = async () => {
-        if (!phoneNumber || !token) return;
+        if (!lookupQuery || !token) return;
         setSearchMessage('Searching...');
-        setFoundProperty(null);
+        setSearchResults([]);
+        setSelectedProperty(null); // Clear any previous selection
         try {
-            const response = await fetch(`/api/properties/lookup?phone=${phoneNumber}`, {
+            const response = await fetch(`/api/properties/lookup?query=${lookupQuery}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (response.ok) {
-                const data: Property = await response.json();
-                setFoundProperty(data);
-                setSearchMessage('');
+                const data: Property[] = await response.json();
+                setSearchResults(data);
+                setSearchMessage(data.length > 0 ? `${data.length} result(s) found.` : 'No results found.');
             } else {
                 const errorData = await response.json();
                 setSearchMessage(errorData.message || 'Search failed.');
+                setSearchResults([]);
             }
         } catch (error) {
             console.error("Search network error:", error);
@@ -78,25 +88,26 @@ export default function NewJobPage() {
         }
     };
 
+    // Function to handle the final form submission
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         setSubmitMessage('Creating job...');
 
         const selectedCategory = categories.find(c => c.name === selectedCategoryName);
-
         if (!selectedCategory) {
             setSubmitMessage('Error: Please select a valid category.');
             return;
         }
-        if (!foundProperty) {
-            setSubmitMessage('Error: Please find a property before creating a job.');
+        if (!selectedProperty) {
+            setSubmitMessage('Error: Please select a property from the search results before creating a job.');
             return;
         }
 
         const jobData = {
-            propertyId: foundProperty.id,
+            propertyId: selectedProperty.id,
             jobCategoryId: selectedCategory.id,
             description: description,
+            complainantPhoneNumber: complainantPhoneNumber,
         };
 
         try {
@@ -108,20 +119,20 @@ export default function NewJobPage() {
                 },
                 body: JSON.stringify(jobData)
             });
-
             if (response.ok) {
                 alert('Job created successfully!');
                 router.push('/dashboard');
             } else {
                 const errorData = await response.json();
-                setSubmitMessage(`Error: ${errorData.message}`);
+                setSubmitMessage(`Error creating job: ${errorData.message}`);
             }
         } catch (error) {
             console.error("Error creating job:", error);
-            setSubmitMessage('A network error occurred.');
+            setSubmitMessage('A network error occurred while creating the job.');
         }
     };
 
+    // Styling object for the component
     const styles: { [key: string]: React.CSSProperties } = {
         pageContainer: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f4f7f6' },
         mainContent: { flex: 1, padding: '20px', overflowY: 'auto' },
@@ -133,6 +144,9 @@ export default function NewJobPage() {
         button: { padding: '10px 20px', fontSize: '1rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
         createButton: { padding: '8px 16px', fontSize: '0.9rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
         searchContainer: { display: 'flex', gap: '10px', alignItems: 'center' },
+        resultsContainer: { marginTop: '10px', maxHeight: '200px', overflowY: 'auto', border: '1px solid #eee', borderRadius: '4px' },
+        resultItem: { padding: '10px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+        selectButton: { padding: '5px 10px', fontSize: '0.8rem', cursor: 'pointer' },
         propertyInfo: { marginTop: '20px', padding: '15px', border: '1px solid #e0e0e0', borderRadius: '4px', backgroundColor: '#f9f9f9' },
         propertyDetails: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' },
         statusTag: { fontWeight: 'bold', color: 'white', padding: '2px 8px', borderRadius: '4px' },
@@ -145,74 +159,81 @@ export default function NewJobPage() {
                 <div style={styles.formContainer}>
                     <h1>Capture New Job</h1>
                     <form onSubmit={handleSubmit}>
+                        {/* --- PROPERTY LOOKUP --- */}
                         <div style={styles.formGroup}>
-                            <label htmlFor="phone">Customer Phone Number</label>
+                            <label htmlFor="lookup">Lookup by Phone, ERF, Address, or Account No.</label>
                             <div style={styles.searchContainer}>
-                                <input 
-                                  type="tel" 
-                                  id="phone" 
-                                  style={{...styles.input, flex: 1}} 
-                                  value={phoneNumber}
-                                  // This is the corrected line
-                                  onChange={(e) => setPhoneNumber(e.target.value)} 
-                                />
-                                <button type="button" onClick={handleSearch} style={styles.button}>Search</button>
+                                <input type="text" id="lookup" style={{...styles.input, flex: 1}} value={lookupQuery} onChange={(e) => setLookupQuery(e.target.value)} />
+                                <button type="button" onClick={handleSearch} style={styles.button}>Lookup</button>
                             </div>
                         </div>
                         {searchMessage && <p>{searchMessage}</p>}
-                        {foundProperty && (
+                        
+                        {/* --- SEARCH RESULTS LIST --- */}
+                        {searchResults.length > 0 && !selectedProperty && (
+                            <div style={styles.resultsContainer}>
+                                {searchResults.map(prop => (
+                                    <div key={prop.id} style={styles.resultItem}>
+                                        <div>
+                                            <strong>{prop.streetAddress}</strong><br/>
+                                            <small>ERF: {prop.erfNumber} | Account: {prop.accountNumber}</small>
+                                        </div>
+                                        <button type="button" onClick={() => setSelectedProperty(prop)} style={styles.selectButton}>Select</button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* --- SELECTED PROPERTY DISPLAY --- */}
+                        {selectedProperty && (
                             <div style={styles.propertyInfo}>
-                                <h4>Property Details (Read-Only)</h4>
+                                <h4>Selected Property</h4>
                                 <div style={styles.propertyDetails}>
-                                    <p><strong>Account:</strong> {foundProperty.accountNumber}</p>
-                                    <p><strong>ERF Number:</strong> {foundProperty.erfNumber}</p>
-                                    <p><strong>Address:</strong> {foundProperty.streetAddress}</p>
-                                    <p><strong>Ward:</strong> {foundProperty.ward}</p>
+                                    <p><strong>Account:</strong> {selectedProperty.accountNumber}</p>
+                                    <p><strong>ERF Number:</strong> {selectedProperty.erfNumber}</p>
+                                    <p><strong>Address:</strong> {selectedProperty.streetAddress}</p>
+                                    <p><strong>Ward:</strong> {selectedProperty.ward}</p>
                                     <p><strong>Indigent: </strong>
-                                        <span style={{...styles.statusTag, backgroundColor: foundProperty.isIndigent ? '#28a745' : '#dc3545'}}>
-                                            {foundProperty.isIndigent ? 'Yes' : 'No'}
+                                        <span style={{...styles.statusTag, backgroundColor: selectedProperty.isIndigent ? '#28a745' : '#dc3545'}}>
+                                            {selectedProperty.isIndigent ? 'Yes' : 'No'}
                                         </span>
                                     </p>
                                     <p><strong>In Arrears: </strong>
-                                        <span style={{...styles.statusTag, backgroundColor: foundProperty.inArrears ? '#dc3545' : '#28a745'}}>
-                                            {foundProperty.inArrears ? 'Yes' : 'No'}
+                                        <span style={{...styles.statusTag, backgroundColor: selectedProperty.inArrears ? '#dc3545' : '#28a745'}}>
+                                            {selectedProperty.inArrears ? 'Yes' : 'No'}
                                         </span>
                                     </p>
-                                    <p><strong>Elec Meter:</strong> {foundProperty.meterNumberElectricity || 'N/A'}</p>
-                                    <p><strong>Water Meter:</strong> {foundProperty.meterNumberWater || 'N/A'}</p>
+                                    <p><strong>Elec Meter:</strong> {selectedProperty.meterNumberElectricity || 'N/A'}</p>
+                                    <p><strong>Water Meter:</strong> {selectedProperty.meterNumberWater || 'N/A'}</p>
                                 </div>
                             </div>
                         )}
+
                         <hr style={{margin: '20px 0', border: 'none', borderTop: '1px solid #eee'}} />
-                        <div style={styles.formGroup}>
-                            <label htmlFor="category">Category</label>
-                            <input
-                                list="category-options"
-                                id="category"
-                                style={styles.input}
-                                placeholder="Type to search categories..."
-                                value={selectedCategoryName}
-                                onChange={(e) => setSelectedCategoryName(e.target.value)}
-                                required
-                            />
-                            <datalist id="category-options">
-                                {categories.map(cat => (
-                                    <option key={cat.id} value={cat.name} />
-                                ))}
-                            </datalist>
-                        </div>
-                        <div style={styles.formGroup}>
-                            <label htmlFor="description">Full Description</label>
-                            <textarea
-                                id="description"
-                                style={styles.textarea}
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                required
-                            />
-                        </div>
-                        {submitMessage && <p>{submitMessage}</p>}
-                        <button type="submit" style={styles.createButton}>Create Job</button>
+                        
+                        {/* The rest of the form is disabled until a property is selected */}
+                        <fieldset disabled={!selectedProperty} style={{border: 'none', padding: 0, margin: 0}}>
+                            <div style={styles.formGroup}>
+                                <label htmlFor="complainantPhone">Complainant's Phone Number (if different)</label>
+                                <input type="tel" id="complainantPhone" style={styles.input} value={complainantPhoneNumber} onChange={(e) => setComplainantPhoneNumber(e.target.value)} />
+                            </div>
+                            
+                            <div style={styles.formGroup}>
+                                <label htmlFor="category">Category</label>
+                                <input list="category-options" id="category" style={styles.input} placeholder="Type to search categories..." value={selectedCategoryName} onChange={(e) => setSelectedCategoryName(e.target.value)} required />
+                                <datalist id="category-options">
+                                    {categories.map(cat => ( <option key={cat.id} value={cat.name} /> ))}
+                                </datalist>
+                            </div>
+
+                            <div style={styles.formGroup}>
+                                <label htmlFor="description">Full Description</label>
+                                <textarea id="description" style={styles.textarea} value={description} onChange={(e) => setDescription(e.target.value)} required />
+                            </div>
+
+                            {submitMessage && <p>{submitMessage}</p>}
+                            <button type="submit" style={styles.createButton}>Create Job</button>
+                        </fieldset>
                     </form>
                 </div>
             </main>
