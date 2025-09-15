@@ -6,13 +6,17 @@ import Toolbar from '../../../components/Toolbar';
 import { useAuth } from '../../AuthContext';
 import { useRouter } from 'next/navigation';
 
-// Interfaces for our data
+// Interfaces for our data models
 interface Property {
   id: number;
   accountNumber: string;
+  accountHolder: string;
   erfNumber: string;
   streetAddress: string;
+  suburb: string;
   ward: string;
+  cellNumber: string;
+  cellNumber2: string;
   isIndigent: boolean;
   meterNumberElectricity: string | null;
   meterNumberWater: string | null;
@@ -24,13 +28,16 @@ export default function NewJobPage() {
     const { token } = useAuth();
     const router = useRouter();
 
-    // State for inputs
+    // State to manage which step of the wizard is active
+    const [step, setStep] = useState(1); // 1 for lookup, 2 for details
+
+    // State for user inputs
     const [lookupQuery, setLookupQuery] = useState('');
     const [complainantPhoneNumber, setComplainantPhoneNumber] = useState('');
     const [selectedCategoryName, setSelectedCategoryName] = useState('');
     const [description, setDescription] = useState('');
 
-    // State for data
+    // State for data fetched from API
     const [searchResults, setSearchResults] = useState<Property[]>([]);
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
     const [categories, setCategories] = useState<JobCategory[]>([]);
@@ -39,6 +46,7 @@ export default function NewJobPage() {
     const [searchMessage, setSearchMessage] = useState('');
     const [submitMessage, setSubmitMessage] = useState('');
 
+    // Effect to fetch job categories when the component mounts
     useEffect(() => {
         const fetchCategories = async () => {
             if (!token) return;
@@ -57,6 +65,7 @@ export default function NewJobPage() {
         fetchCategories();
     }, [token]);
 
+    // Function to handle the property lookup
     const handleSearch = async () => {
         if (!lookupQuery || !token) return;
         setSearchMessage('Searching...');
@@ -81,34 +90,32 @@ export default function NewJobPage() {
         }
     };
     
+    // Function to handle selecting a property from the results
+    const handleSelectProperty = (property: Property) => {
+        setSelectedProperty(property);
+        setComplainantPhoneNumber(property.cellNumber); // Pre-fill with owner's number
+        setStep(2); // Move to the details step
+    };
+
+    // Function to handle final form submission
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         setSubmitMessage('Creating job...');
-
         const selectedCategory = categories.find(c => c.name === selectedCategoryName);
-        
-        // --- THIS IS THE FIX ---
-        // Use 'selectedProperty' instead of the old 'foundProperty'
         if (!selectedCategory || !selectedProperty) {
             setSubmitMessage('Error: A property and category must be selected.');
             return;
         }
-
         const jobData = {
-            // Use 'selectedProperty.id' here as well
             propertyId: selectedProperty.id,
             jobCategoryId: selectedCategory.id,
             description: description,
             complainantPhoneNumber: complainantPhoneNumber,
         };
-
         try {
             const response = await fetch('/api/jobs', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
                 body: JSON.stringify(jobData)
             });
             if (response.ok) {
@@ -124,6 +131,7 @@ export default function NewJobPage() {
         }
     };
 
+    // Styling object
     const styles: { [key: string]: React.CSSProperties } = {
         pageContainer: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f4f7f6' },
         mainContent: { flex: 1, padding: '20px', overflowY: 'auto' },
@@ -141,6 +149,7 @@ export default function NewJobPage() {
         propertyInfo: { marginTop: '20px', padding: '15px', border: '1px solid #e0e0e0', borderRadius: '4px', backgroundColor: '#f9f9f9' },
         propertyDetails: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' },
         statusTag: { fontWeight: 'bold', color: 'white', padding: '2px 8px', borderRadius: '4px' },
+        backButton: { backgroundColor: '#6c757d', marginRight: '10px' }
     };
 
     return (
@@ -148,80 +157,72 @@ export default function NewJobPage() {
             <Toolbar />
             <main style={styles.mainContent}>
                 <div style={styles.formContainer}>
-                    <h1>Capture New Job</h1>
-                    <form onSubmit={handleSubmit}>
-                        <div style={styles.formGroup}>
-                            <label htmlFor="lookup">Lookup by Phone, ERF, Address, or Account No.</label>
-                            <div style={styles.searchContainer}>
-                                <input type="text" id="lookup" style={{...styles.input, flex: 1}} value={lookupQuery} onChange={(e) => setLookupQuery(e.target.value)} />
-                                <button type="button" onClick={handleSearch} style={styles.button}>Lookup</button>
+                    {/* --- Step 1: Property Lookup --- */}
+                    {step === 1 && (
+                        <div>
+                            <h1>Step 1: Find Property</h1>
+                            <div style={styles.formGroup}>
+                                <label htmlFor="lookup">Lookup by Phone, ERF, Address, or Account No.</label>
+                                <div style={styles.searchContainer}>
+                                    <input type="text" id="lookup" style={{...styles.input, flex: 1}} value={lookupQuery} onChange={(e) => setLookupQuery(e.target.value)} />
+                                    <button type="button" onClick={handleSearch} style={styles.button}>Lookup</button>
+                                </div>
                             </div>
-                        </div>
-                        {searchMessage && <p>{searchMessage}</p>}
-                        
-                        {searchResults.length > 0 && !selectedProperty && (
-                            <div style={styles.resultsContainer}>
-                                {searchResults.map(prop => (
-                                    <div key={prop.id} style={styles.resultItem}>
-                                        <div>
-                                            <strong>{prop.streetAddress}</strong><br/>
-                                            <small>ERF: {prop.erfNumber} | Account: {prop.accountNumber}</small>
+                            {searchMessage && <p>{searchMessage}</p>}
+                            {searchResults.length > 0 && (
+                                <div style={styles.resultsContainer}>
+                                    {searchResults.map(prop => (
+                                        <div key={prop.id} style={styles.resultItem}>
+                                            <div>
+                                                <strong>{prop.streetAddress}</strong><br/>
+                                                <small>ERF: {prop.erfNumber} | Account: {prop.accountNumber}</small>
+                                            </div>
+                                            <button type="button" onClick={() => handleSelectProperty(prop)} style={styles.selectButton}>Select</button>
                                         </div>
-                                        <button type="button" onClick={() => setSelectedProperty(prop)} style={styles.selectButton}>Select</button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
-                        {selectedProperty && (
+                    {/* --- Step 2: Job Details --- */}
+                    {step === 2 && selectedProperty && (
+                        <div>
+                            <h1>Step 2: Log Details</h1>
                             <div style={styles.propertyInfo}>
                                 <h4>Selected Property</h4>
                                 <div style={styles.propertyDetails}>
-                                    <p><strong>Account:</strong> {selectedProperty.accountNumber}</p>
+                                    <p><strong>Account Holder:</strong> {selectedProperty.accountHolder}</p>
+                                    <p><strong>Address:</strong> {selectedProperty.streetAddress}, {selectedProperty.suburb}</p>
                                     <p><strong>ERF Number:</strong> {selectedProperty.erfNumber}</p>
-                                    <p><strong>Address:</strong> {selectedProperty.streetAddress}</p>
                                     <p><strong>Ward:</strong> {selectedProperty.ward}</p>
-                                    <p><strong>Indigent: </strong>
-                                        <span style={{...styles.statusTag, backgroundColor: selectedProperty.isIndigent ? '#28a745' : '#dc3545'}}>
-                                            {selectedProperty.isIndigent ? 'Yes' : 'No'}
-                                        </span>
-                                    </p>
-                                    <p><strong>In Arrears: </strong>
-                                        <span style={{...styles.statusTag, backgroundColor: selectedProperty.inArrears ? '#dc3545' : '#28a745'}}>
-                                            {selectedProperty.inArrears ? 'Yes' : 'No'}
-                                        </span>
-                                    </p>
-                                    <p><strong>Elec Meter:</strong> {selectedProperty.meterNumberElectricity || 'N/A'}</p>
-                                    <p><strong>Water Meter:</strong> {selectedProperty.meterNumberWater || 'N/A'}</p>
                                 </div>
                             </div>
-                        )}
-
-                        <hr style={{margin: '20px 0', border: 'none', borderTop: '1px solid #eee'}} />
-                        
-                        <fieldset disabled={!selectedProperty} style={{border: 'none', padding: 0, margin: 0}}>
-                            <div style={styles.formGroup}>
-                                <label htmlFor="complainantPhone">Complainant&apos;s Phone Number (if different)</label>
-                                <input type="tel" id="complainantPhone" style={styles.input} value={complainantPhoneNumber} onChange={(e) => setComplainantPhoneNumber(e.target.value)} />
-                            </div>
-                            
-                            <div style={styles.formGroup}>
-                                <label htmlFor="category">Category</label>
-                                <input list="category-options" id="category" style={styles.input} placeholder="Type to search categories..." value={selectedCategoryName} onChange={(e) => setSelectedCategoryName(e.target.value)} required />
-                                <datalist id="category-options">
-                                    {categories.map(cat => ( <option key={cat.id} value={cat.name} /> ))}
-                                </datalist>
-                            </div>
-
-                            <div style={styles.formGroup}>
-                                <label htmlFor="description">Full Description</label>
-                                <textarea id="description" style={styles.textarea} value={description} onChange={(e) => setDescription(e.target.value)} required />
-                            </div>
-
-                            {submitMessage && <p>{submitMessage}</p>}
-                            <button type="submit" style={styles.createButton}>Create Job</button>
-                        </fieldset>
-                    </form>
+                            <hr style={{margin: '20px 0', border: 'none', borderTop: '1px solid #eee'}} />
+                            <form onSubmit={handleSubmit}>
+                                <div style={styles.formGroup}>
+                                    <label htmlFor="complainantPhone">Complainant&apos;s Phone Number</label>
+                                    <input type="tel" id="complainantPhone" style={styles.input} value={complainantPhoneNumber} onChange={(e) => setComplainantPhoneNumber(e.target.value)} />
+                                </div>
+                                <div style={styles.formGroup}>
+                                    <label htmlFor="category">Category</label>
+                                    <input list="category-options" id="category" style={styles.input} placeholder="Type to search categories..." value={selectedCategoryName} onChange={(e) => setSelectedCategoryName(e.target.value)} required />
+                                    <datalist id="category-options">
+                                        {categories.map(cat => ( <option key={cat.id} value={cat.name} /> ))}
+                                    </datalist>
+                                </div>
+                                <div style={styles.formGroup}>
+                                    <label htmlFor="description">Full Description</label>
+                                    <textarea id="description" style={styles.textarea} value={description} onChange={(e) => setDescription(e.target.value)} required />
+                                </div>
+                                {submitMessage && <p>{submitMessage}</p>}
+                                <div>
+                                    <button type="button" onClick={() => setStep(1)} style={{...styles.button, ...styles.backButton}}>Back</button>
+                                    <button type="submit" style={styles.createButton}>Create Job</button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
                 </div>
             </main>
         </div>
