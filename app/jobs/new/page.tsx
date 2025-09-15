@@ -30,7 +30,7 @@ export default function NewJobPage() {
 
     const [step, setStep] = useState(1);
     const [lookupQuery, setLookupQuery] = useState('');
-    const [complainantName, setComplainantName] = useState(''); // New state for name
+    const [complainantName, setComplainantName] = useState('');
     const [complainantPhoneNumber, setComplainantPhoneNumber] = useState('');
     const [selectedCategoryName, setSelectedCategoryName] = useState('');
     const [description, setDescription] = useState('');
@@ -84,9 +84,8 @@ export default function NewJobPage() {
 
     const handleSelectProperty = (property: Property) => {
         setSelectedProperty(property);
-        // Pre-fill fields with the property owner's details
-        setComplainantName(property.accountHolder);
-        setComplainantPhoneNumber(property.cellNumber);
+        setComplainantName(property.accountHolder || '');
+        setComplainantPhoneNumber(property.cellNumber || '');
         setStep(2);
     };
 
@@ -102,7 +101,7 @@ export default function NewJobPage() {
             propertyId: selectedProperty.id,
             jobCategoryId: selectedCategory.id,
             description: description,
-            complainantName: complainantName, // Send the name to the backend
+            complainantName: complainantName,
             complainantPhoneNumber: complainantPhoneNumber,
         };
         try {
@@ -195,10 +194,20 @@ export default function NewJobPage() {
                             <div style={styles.propertyInfo}>
                                 <h4>Selected Property</h4>
                                 <div style={styles.propertyDetails}>
-                                    <p><strong>Account Holder:</strong> {selectedProperty.accountHolder}</p>
-                                    <p><strong>Address:</strong> {selectedProperty.streetAddress}, {selectedProperty.suburb}</p>
+                                    <p><strong>Account Holder:</strong> {selectedProperty.accountHolder || 'N/A'}</p>
+                                    <p><strong>Address:</strong> {selectedProperty.streetAddress}, {selectedProperty.suburb || ''}</p>
                                     <p><strong>ERF Number:</strong> {selectedProperty.erfNumber}</p>
                                     <p><strong>Ward:</strong> {selectedProperty.ward}</p>
+                                    <p><strong>Indigent: </strong>
+                                        <span style={{...styles.statusTag, backgroundColor: selectedProperty.isIndigent ? '#28a745' : '#dc3545'}}>
+                                            {selectedProperty.isIndigent ? 'Yes' : 'No'}
+                                        </span>
+                                    </p>
+                                    <p><strong>In Arrears: </strong>
+                                        <span style={{...styles.statusTag, backgroundColor: selectedProperty.inArrears ? '#dc3545' : '#28a745'}}>
+                                            {selectedProperty.inArrears ? 'Yes' : 'No'}
+                                        </span>
+                                    </p>
                                 </div>
                             </div>
                             <hr style={{margin: '20px 0', border: 'none', borderTop: '1px solid #eee'}} />
@@ -230,7 +239,7 @@ export default function NewJobPage() {
                                 </div>
                                 {submitMessage && <p>{submitMessage}</p>}
                                 <div>
-                                    <button type="button" onClick={() => setStep(1)} style={{...styles.button, ...styles.backButton}}>Back</button>
+                                    <button type="button" onClick={() => { setSearchResults([]); setSelectedProperty(null); setStep(1); }} style={{...styles.button, ...styles.backButton}}>Back to Search</button>
                                     <button type="submit" style={styles.createButton}>Create Job</button>
                                 </div>
                             </form>
