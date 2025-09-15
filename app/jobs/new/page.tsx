@@ -28,25 +28,18 @@ export default function NewJobPage() {
     const { token } = useAuth();
     const router = useRouter();
 
-    // State to manage which step of the wizard is active
-    const [step, setStep] = useState(1); // 1 for lookup, 2 for details
-
-    // State for user inputs
+    const [step, setStep] = useState(1);
     const [lookupQuery, setLookupQuery] = useState('');
+    const [complainantName, setComplainantName] = useState(''); // New state for name
     const [complainantPhoneNumber, setComplainantPhoneNumber] = useState('');
     const [selectedCategoryName, setSelectedCategoryName] = useState('');
     const [description, setDescription] = useState('');
-
-    // State for data fetched from API
     const [searchResults, setSearchResults] = useState<Property[]>([]);
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
     const [categories, setCategories] = useState<JobCategory[]>([]);
-    
-    // State for UI feedback
     const [searchMessage, setSearchMessage] = useState('');
     const [submitMessage, setSubmitMessage] = useState('');
 
-    // Effect to fetch job categories when the component mounts
     useEffect(() => {
         const fetchCategories = async () => {
             if (!token) return;
@@ -65,7 +58,6 @@ export default function NewJobPage() {
         fetchCategories();
     }, [token]);
 
-    // Function to handle the property lookup
     const handleSearch = async () => {
         if (!lookupQuery || !token) return;
         setSearchMessage('Searching...');
@@ -89,15 +81,15 @@ export default function NewJobPage() {
             setSearchMessage('A network error occurred during search.');
         }
     };
-    
-    // Function to handle selecting a property from the results
+
     const handleSelectProperty = (property: Property) => {
         setSelectedProperty(property);
-        setComplainantPhoneNumber(property.cellNumber); // Pre-fill with owner's number
-        setStep(2); // Move to the details step
+        // Pre-fill fields with the property owner's details
+        setComplainantName(property.accountHolder);
+        setComplainantPhoneNumber(property.cellNumber);
+        setStep(2);
     };
 
-    // Function to handle final form submission
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         setSubmitMessage('Creating job...');
@@ -110,6 +102,7 @@ export default function NewJobPage() {
             propertyId: selectedProperty.id,
             jobCategoryId: selectedCategory.id,
             description: description,
+            complainantName: complainantName, // Send the name to the backend
             complainantPhoneNumber: complainantPhoneNumber,
         };
         try {
@@ -131,7 +124,13 @@ export default function NewJobPage() {
         }
     };
 
-    // Styling object
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            handleSearch();
+        }
+    };
+
     const styles: { [key: string]: React.CSSProperties } = {
         pageContainer: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f4f7f6' },
         mainContent: { flex: 1, padding: '20px', overflowY: 'auto' },
@@ -157,14 +156,20 @@ export default function NewJobPage() {
             <Toolbar />
             <main style={styles.mainContent}>
                 <div style={styles.formContainer}>
-                    {/* --- Step 1: Property Lookup --- */}
                     {step === 1 && (
                         <div>
                             <h1>Step 1: Find Property</h1>
                             <div style={styles.formGroup}>
                                 <label htmlFor="lookup">Lookup by Phone, ERF, Address, or Account No.</label>
                                 <div style={styles.searchContainer}>
-                                    <input type="text" id="lookup" style={{...styles.input, flex: 1}} value={lookupQuery} onChange={(e) => setLookupQuery(e.target.value)} />
+                                    <input
+                                        type="text"
+                                        id="lookup"
+                                        style={{...styles.input, flex: 1}}
+                                        value={lookupQuery}
+                                        onChange={(e) => setLookupQuery(e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                    />
                                     <button type="button" onClick={handleSearch} style={styles.button}>Lookup</button>
                                 </div>
                             </div>
@@ -184,8 +189,6 @@ export default function NewJobPage() {
                             )}
                         </div>
                     )}
-
-                    {/* --- Step 2: Job Details --- */}
                     {step === 2 && selectedProperty && (
                         <div>
                             <h1>Step 2: Log Details</h1>
@@ -200,6 +203,16 @@ export default function NewJobPage() {
                             </div>
                             <hr style={{margin: '20px 0', border: 'none', borderTop: '1px solid #eee'}} />
                             <form onSubmit={handleSubmit}>
+                                <div style={styles.formGroup}>
+                                    <label htmlFor="complainantName">Complainant&apos;s Name</label>
+                                    <input
+                                      type="text"
+                                      id="complainantName"
+                                      style={styles.input}
+                                      value={complainantName}
+                                      onChange={(e) => setComplainantName(e.target.value)}
+                                    />
+                                </div>
                                 <div style={styles.formGroup}>
                                     <label htmlFor="complainantPhone">Complainant&apos;s Phone Number</label>
                                     <input type="tel" id="complainantPhone" style={styles.input} value={complainantPhoneNumber} onChange={(e) => setComplainantPhoneNumber(e.target.value)} />
