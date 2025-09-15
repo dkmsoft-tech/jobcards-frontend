@@ -1,11 +1,12 @@
 // app/auth/callback/page.tsx
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react'; // 1. Import Suspense
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '../../AuthContext';
 
-export default function AuthCallbackPage() {
+// 2. Create a new component to contain the client-side logic
+function CallbackClientComponent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { login } = useAuth();
@@ -22,10 +23,24 @@ export default function AuthCallbackPage() {
         }
     }, [searchParams, router, login]);
     
-    // This page will just show a loading message while it processes
+    // This component doesn't render anything itself, it just handles the logic
+    return null;
+}
+
+export default function AuthCallbackPage() {
+    const styles = {
+        loadingContainer: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100vh'
+        }
+    };
+    
+    // 3. Wrap the client component in a Suspense boundary
     return (
-        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh'}}>
-            <p>Authenticating, please wait...</p>
-        </div>
+        <Suspense fallback={<div style={styles.loadingContainer}><p>Authenticating, please wait...</p></div>}>
+            <CallbackClientComponent />
+        </Suspense>
     );
 }
