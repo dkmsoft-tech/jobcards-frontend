@@ -11,19 +11,21 @@ function CallbackProcessor() {
     const { login } = useAuth();
 
     useEffect(() => {
+        console.log('CallbackProcessor: useEffect is running.'); // Checkpoint 1
+
         const token = searchParams.get('token');
+        console.log('CallbackProcessor: Token from URL is:', token); // Checkpoint 2
+
         if (token) {
+            console.log('CallbackProcessor: Token found. Calling login() and redirecting to /dashboard...'); // Checkpoint 3
             login(token);
-            // Use router.replace for a cleaner redirect that doesn't
-            // keep the callback page in the browser's history.
             router.replace('/dashboard');
         } else {
-            console.error("No token found in callback URL");
-            router.replace('/'); // Redirect to login page on error
+            console.log('CallbackProcessor: No token found. Redirecting to login page...'); // Checkpoint 4
+            router.replace('/');
         }
     }, [searchParams, router, login]);
     
-    // While processing, this component renders nothing.
     return null;
 }
 
@@ -39,7 +41,6 @@ export default function AuthCallbackPage() {
         }
     };
     
-    // Wrap the processor in a Suspense boundary
     return (
         <Suspense fallback={<div style={styles.loadingContainer}><p>Authenticating, please wait...</p></div>}>
             <CallbackProcessor />
