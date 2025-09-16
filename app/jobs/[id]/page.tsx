@@ -2,39 +2,24 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../AuthContext'; // Corrected path
-import Toolbar from '../../../components/Toolbar'; // Corrected path
-import { Job } from '../../../types'; // Corrected path
+import { useAuth } from '../../AuthContext';
+import Toolbar from '../../../components/Toolbar';
+import { DetailedJob, User as Technician } from '../../../types';
 import { useRouter } from 'next/navigation';
 
-// A more detailed Property interface for this page
-interface PropertyDetails {
-    accountHolder: string;
-    accountNumber: string;
-    erfNumber: string;
-    streetAddress: string;
-    suburb: string;
-    ward: string;
-    cellNumber: string;
-    cellNumber2: string;
-    isIndigent: boolean;
-    inArrears: boolean;
-}
-
-// A more detailed Job interface that includes the full Property
-interface DetailedJob extends Job {
-    Property: PropertyDetails | null;
-    description: string;
-    complainantPhoneNumber: string;
-    creator: { name: string; } | null;
-}
-
 export default function JobDetailsPage({ params }: { params: { id: string } }) {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
     const router = useRouter();
+    
+    // State for data
     const [job, setJob] = useState<DetailedJob | null>(null);
+    const [technicians, setTechnicians] = useState<Technician[]>([]);
+    
+    // State for UI
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [selectedTechnician, setSelectedTechnician] = useState('');
+    const [message, setMessage] = useState('');
     
     useEffect(() => {
         if (!token) {
@@ -52,6 +37,9 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
                 }
                 const data = await response.json();
                 setJob(data);
+                if (data.technician) {
+                    setSelectedTechnician(data.technician.id);
+                }
             } catch (err) {
                 console.error("Error fetching details:", err);
                 setError('Could not load job details.');
@@ -60,9 +48,51 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
             }
         };
 
-        fetchJobDetails();
-    }, [token, params.id, router]);
+        const fetchTechs = async () => {
+            try {
+                const response = await fetch('/api/users/technicians', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setTechnicians(data);
+                }
+            } catch (err) {
+                console.error("Error fetching technicians:", err);
+            }
+        };
 
+        fetchJobDetails();
+        if (user && ['System Admin', 'Department Admin'].includes(user.role)) {
+            fetchTechs();
+        }
+    }, [token, params.id, router, user]);
+
+    const handleAssign = async () => {
+        if (!selectedTechnician) {
+            setMessage('Please select a technician.');
+            return;
+        }
+        setMessage('Assigning...');
+        try {
+            const response = await fetch(`/api/jobs/${params.id}/assign`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ technicianId: selectedTechnician })
+            });
+            if (response.ok) {
+                const updatedJob = await response.json();
+                setJob(updatedJob);
+                setMessage('Job assigned successfully!');
+            } else {
+                setMessage('Failed to assign job.');
+            }
+        } catch (error) {
+            console.error("Assignment error:", error);
+            setMessage('A network error occurred during assignment.');
+        }
+    };
+    
     const styles: { [key: string]: React.CSSProperties } = {
         pageContainer: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f4f7f6' },
         mainContent: { flex: 1, padding: '20px', overflowY: 'auto' },
@@ -71,12 +101,19 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
         sectionTitle: { borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px', gridColumn: '1 / -1' },
         detailItem: { marginBottom: '10px' },
         label: { fontWeight: 'bold', display: 'block' },
+        assignmentBox: { gridColumn: '1 / -1', marginTop: '10px', display: 'flex', gap: '10px', alignItems: 'center' },
+        select: { padding: '8px', fontSize: '1rem', border: '1px solid #ccc', borderRadius: '4px' },
+        button: { padding: '8px 16px', fontSize: '1rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
     };
 
-    if (loading) return <p>Loading job details...</p>;
-    if (error) return <p>{error}</p>;
-    if (!job) return <p>Job not found.</p>;
+    const isAdmin = user && ['System Admin', 'Department Admin'].includes(user.role);
 
+    // Handle loading, error, and not found states first
+    if (loading) return <div style={styles.pageContainer}><Toolbar /><main style={styles.mainContent}><p>Loading job details...</p></main></div>;
+    if (error) return <div style={styles.pageContainer}><Toolbar /><main style={styles.mainContent}><p>{error}</p></main></div>;
+    if (!job) return <div style={styles.pageContainer}><Toolbar /><main style={styles.mainContent}><p>Job not found.</p></main></div>;
+    
+    // Main component return
     return (
         <div style={styles.pageContainer}>
             <Toolbar />
@@ -101,6 +138,31 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
                         <h2 style={styles.sectionTitle}>Contact Information</h2>
                         <div style={styles.detailItem}><span style={styles.label}>Property Cellphone:</span> {job.Property?.cellNumber}</div>
                         <div style={styles.detailItem}><span style={styles.label}>Complainant Cellphone:</span> {job.complainantPhoneNumber || 'N/A'}</div>
+
+                        <h2 style={styles.sectionTitle}>Assignment</h2>
+                        <div style={styles.detailItem}>
+                            <span style={styles.label}>Currently Assigned To:</span> 
+                            {job.technician ? job.technician.name : 'Unassigned'}
+                        </div>
+
+                        {isAdmin && (
+                            <div style={styles.assignmentBox}>
+                                <label htmlFor="technician" style={{...styles.label, marginBottom: 0}}>Assign to:</label>
+                                <select 
+                                    id="technician" 
+                                    style={styles.select} 
+                                    value={selectedTechnician} 
+                                    onChange={(e) => setSelectedTechnician(e.target.value)}
+                                >
+                                    <option value="">-- Select Technician --</option>
+                                    {technicians.map(tech => (
+                                        <option key={tech.id} value={tech.id}>{tech.name}</option>
+                                    ))}
+                                </select>
+                                <button onClick={handleAssign} style={styles.button}>Assign</button>
+                            </div>
+                        )}
+                        {message && <p>{message}</p>}
                     </div>
                 </div>
             </main>
