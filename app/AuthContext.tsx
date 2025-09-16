@@ -1,17 +1,15 @@
 // app/AuthContext.tsx
 'use client';
 
-import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react'; // 1. Import useCallback
+import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { User } from '../types';
 
-// Define the shape of the decoded token
 interface DecodedToken extends User {
   iat: number;
   exp: number;
 }
 
-// Define the shape of the context data
 interface AuthContextType {
   token: string | null;
   user: User | null;
@@ -32,18 +30,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const storedToken = localStorage.getItem('token');
       if (storedToken) {
         const decoded = jwtDecode<DecodedToken>(storedToken);
-        setToken(storedToken);
-        setUser({ id: decoded.id, name: decoded.name, role: decoded.role });
+        // Check if token is expired
+        if (decoded.exp * 1000 > Date.now()) {
+          setToken(storedToken);
+          setUser({ id: decoded.id, name: decoded.name, role: decoded.role });
+        } else {
+          // Token is expired, remove it
+          localStorage.removeItem('token');
+        }
       }
     } catch (error) {
-      console.error("Invalid token:", error);
-      localStorage.removeItem('token'); // Clear invalid token
+      console.error("Failed to process token on initial load:", error);
+      localStorage.removeItem('token');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // 2. Wrap the login function in useCallback
   const login = useCallback((newToken: string) => {
     localStorage.setItem('token', newToken);
     const decoded = jwtDecode<DecodedToken>(newToken);
@@ -51,21 +54,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser({ id: decoded.id, name: decoded.name, role: decoded.role });
   }, []);
 
-  // 3. Wrap the logout function in useCallback
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+    // Optional: redirect to login page after logout
+    window.location.href = '/';
   }, []);
 
   return (
     <AuthContext.Provider value={{ token, user, loading, login, logout }}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
