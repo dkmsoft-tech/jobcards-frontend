@@ -11,53 +11,57 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
     const { token, user } = useAuth();
     const router = useRouter();
     
+    // State for data
     const [job, setJob] = useState<DetailedJob | null>(null);
     const [technicians, setTechnicians] = useState<Technician[]>([]);
+    
+    // State for UI and interactions
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [selectedTechnician, setSelectedTechnician] = useState('');
     const [message, setMessage] = useState('');
     
-    const fetchJobDetails = async () => {
-        if (!token) return;
-        try {
-            const response = await fetch(`/api/jobs/${params.id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) {
-                throw new Error('Failed to fetch job details');
-            }
-            const data = await response.json();
-            setJob(data);
-            if (data.technician) {
-                setSelectedTechnician(data.technician.id);
-            }
-        } catch (err) {
-            console.error("Error fetching details:", err);
-            setError('Could not load job details.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
         if (!token) {
             router.push('/');
             return;
         }
 
-        const fetchTechs = async () => {
-            if (!user || !['System Admin', 'Department Admin'].includes(user.role)) return;
+        const fetchJobDetails = async () => {
             try {
-                const response = await fetch('/api/users/technicians', {
+                const response = await fetch(`/api/jobs/${params.id}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (response.ok) {
-                    const data = await response.json();
-                    setTechnicians(data);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch job details');
+                }
+                const data: DetailedJob = await response.json();
+                setJob(data);
+                if (data.technician) {
+                    setSelectedTechnician(data.technician.id.toString());
                 }
             } catch (err) {
-                console.error("Error fetching technicians", err);
+                console.error("Error fetching details:", err);
+                setError('Could not load job details.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const fetchTechs = async () => {
+            // Only fetch the list of technicians if the logged-in user is an admin
+            if (user && ['System Admin', 'Department Admin'].includes(user.role)) {
+                try {
+                    const response = await fetch('/api/users/technicians', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        setTechnicians(data);
+                    }
+                } catch (err) {
+                    console.error("Error fetching technicians", err);
+                }
             }
         };
 
@@ -118,8 +122,8 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
         grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' },
         sectionTitle: { borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px', gridColumn: '1 / -1' },
         detailItem: { marginBottom: '10px' },
-        label: { fontWeight: 'bold', display: 'block' },
-        assignmentBox: { gridColumn: '1 / -1', marginTop: '10px', display: 'flex', gap: '10px', alignItems: 'center' },
+        label: { fontWeight: 'bold', display: 'block', color: '#555', marginBottom: '4px' },
+        assignmentBox: { gridColumn: '1 / -1', marginTop: '10px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' },
         select: { padding: '8px', fontSize: '1rem', border: '1px solid #ccc', borderRadius: '4px' },
         button: { padding: '8px 16px', fontSize: '1rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
         technicianActions: { gridColumn: '1 / -1', display: 'flex', gap: '10px', flexWrap: 'wrap' },
@@ -129,6 +133,7 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
     const isAdmin = user && ['System Admin', 'Department Admin'].includes(user.role);
     const isAssignedTechnician = user && job && job.technician?.id === user.id;
 
+    // Handle loading, error, and not found states first
     if (loading) return <div style={styles.pageContainer}><Toolbar /><main style={styles.mainContent}><p>Loading job details...</p></main></div>;
     if (error) return <div style={styles.pageContainer}><Toolbar /><main style={styles.mainContent}><p>{error}</p></main></div>;
     if (!job) return <div style={styles.pageContainer}><Toolbar /><main style={styles.mainContent}><p>Job not found.</p></main></div>;
@@ -153,6 +158,10 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
                         <div style={styles.detailItem}><span style={styles.label}>Address:</span> {job.Property?.streetAddress}</div>
                         <div style={styles.detailItem}><span style={styles.label}>ERF Number:</span> {job.Property?.erfNumber}</div>
                         
+                        <h2 style={styles.sectionTitle}>Contact Information</h2>
+                        <div style={styles.detailItem}><span style={styles.label}>Property Cellphone:</span> {job.Property?.cellNumber}</div>
+                        <div style={styles.detailItem}><span style={styles.label}>Complainant Cellphone:</span> {job.complainantPhoneNumber || 'N/A'}</div>
+
                         <h2 style={styles.sectionTitle}>Assignment</h2>
                         <div style={styles.detailItem}>
                             <span style={styles.label}>Currently Assigned To:</span> 

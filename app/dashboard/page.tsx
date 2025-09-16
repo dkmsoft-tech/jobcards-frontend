@@ -17,11 +17,7 @@ export default function Dashboard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // If the auth state is still loading, do nothing yet.
-    if (loading) {
-      return;
-    }
-    // If loading is finished and there's no token, redirect to login.
+    if (loading) return;
     if (!token) {
       router.push('/');
       return;
@@ -33,16 +29,20 @@ export default function Dashboard() {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) {
-          if (response.status === 403 || response.status === 401) {
-            logout();
-          }
+          if (response.status === 403 || response.status === 401) logout();
           throw new Error(`Failed to fetch jobs. Status: ${response.status}`);
         }
         const data: Job[] = await response.json();
         setJobs(data);
-      } catch (err: any) {
-        console.error("Error fetching jobs:", err);
-        setError(err.message);
+      } catch (err) {
+        // --- THIS IS THE FIX ---
+        // We check if 'err' is an instance of Error before using its message property.
+        if (err instanceof Error) {
+          console.error("Error fetching jobs:", err);
+          setError(err.message);
+        } else {
+          setError("An unknown error occurred.");
+        }
       }
     };
 
