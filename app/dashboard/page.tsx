@@ -8,49 +8,52 @@ import { useRouter } from 'next/navigation';
 import Toolbar from '../../components/Toolbar';
 import StatCard from '../../components/StatCard';
 import JobTable from '../../components/JobTable';
-import { Job } from '../../types'; // Import the shared Job type
-
-// The old, local interface that was here has been DELETED.
+import { Job } from '../../types';
 
 export default function Dashboard() {
-  const { token, logout } = useAuth();
+  const { token, logout, loading } = useAuth();
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    // If the auth state is still loading, do nothing yet.
+    if (loading) {
+      return;
+    }
+    // If loading is finished and there's no token, redirect to login.
     if (!token) {
       router.push('/');
       return;
     }
+
     const fetchJobs = async () => {
       try {
         const response = await fetch('/api/jobs', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) {
-          // This will log out the user if the token is invalid/expired
           if (response.status === 403 || response.status === 401) {
             logout();
-            router.push('/');
           }
-          throw new Error('Failed to fetch jobs');
+          throw new Error(`Failed to fetch jobs. Status: ${response.status}`);
         }
         const data: Job[] = await response.json();
         setJobs(data);
-      } catch (error) {
-        console.error("Error fetching jobs:", error);
+      } catch (err: any) {
+        console.error("Error fetching jobs:", err);
+        setError(err.message);
       }
     };
-    fetchJobs();
-  }, [token, router, logout]);
 
-  // Stats calculations
+    fetchJobs();
+  }, [token, router, logout, loading]);
+
   const totalJobs = jobs.length;
   const pendingJobs = jobs.filter(job => job.status === 'Pending').length;
   const onSiteJobs = jobs.filter(job => job.status === 'On-Site').length;
   const completedJobs = jobs.filter(job => job.status === 'Completed').length;
 
-  // Styles
   const styles: { [key: string]: React.CSSProperties } = {
     dashboardContainer: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f4f7f6' },
     mainContent: { flex: 1, padding: '20px', boxSizing: 'border-box', overflowY: 'auto' },
@@ -58,7 +61,12 @@ export default function Dashboard() {
     jobListContainer: { backgroundColor: '#ffffff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
     jobListHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
     createJobButton: { padding: '10px 20px', fontSize: '1rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', textDecoration: 'none' },
+    errorText: { color: 'red', fontWeight: 'bold' }
   };
+  
+  if (loading) {
+      return <p>Loading...</p>;
+  }
 
   return (
     <div style={styles.dashboardContainer}>
@@ -76,6 +84,7 @@ export default function Dashboard() {
             <h2>Recent Jobs</h2>
             <Link href="/jobs/new" style={styles.createJobButton}>Create New Job</Link>
           </div>
+          {error && <p style={styles.errorText}>{error}</p>}
           {jobs.length > 0 ? (
             <JobTable jobs={jobs} />
           ) : (
