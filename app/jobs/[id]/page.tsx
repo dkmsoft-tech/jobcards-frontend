@@ -11,44 +11,43 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
     const { token, user } = useAuth();
     const router = useRouter();
     
-    // State for data
     const [job, setJob] = useState<DetailedJob | null>(null);
     const [technicians, setTechnicians] = useState<Technician[]>([]);
-    
-    // State for UI
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [selectedTechnician, setSelectedTechnician] = useState('');
     const [message, setMessage] = useState('');
     
+    const fetchJobDetails = async () => {
+        if (!token) return;
+        try {
+            const response = await fetch(`/api/jobs/${params.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                throw new Error('Failed to fetch job details');
+            }
+            const data = await response.json();
+            setJob(data);
+            if (data.technician) {
+                setSelectedTechnician(data.technician.id);
+            }
+        } catch (err) {
+            console.error("Error fetching details:", err);
+            setError('Could not load job details.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
         if (!token) {
             router.push('/');
             return;
         }
 
-        const fetchJobDetails = async () => {
-            try {
-                const response = await fetch(`/api/jobs/${params.id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!response.ok) {
-                    throw new Error('Failed to fetch job details');
-                }
-                const data = await response.json();
-                setJob(data);
-                if (data.technician) {
-                    setSelectedTechnician(data.technician.id);
-                }
-            } catch (err) {
-                console.error("Error fetching details:", err);
-                setError('Could not load job details.');
-            } finally {
-                setLoading(false);
-            }
-        };
-
         const fetchTechs = async () => {
+            if (!user || !['System Admin', 'Department Admin'].includes(user.role)) return;
             try {
                 const response = await fetch('/api/users/technicians', {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -58,14 +57,12 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
                     setTechnicians(data);
                 }
             } catch (err) {
-                console.error("Error fetching technicians:", err);
+                console.error("Error fetching technicians", err);
             }
         };
 
         fetchJobDetails();
-        if (user && ['System Admin', 'Department Admin'].includes(user.role)) {
-            fetchTechs();
-        }
+        fetchTechs();
     }, [token, params.id, router, user]);
 
     const handleAssign = async () => {
@@ -93,6 +90,27 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
         }
     };
     
+    const handleStatusUpdate = async (newStatus: DetailedJob['status']) => {
+        setMessage(`Updating status to "${newStatus}"...`);
+        try {
+            const response = await fetch(`/api/jobs/${params.id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (response.ok) {
+                const updatedJob = await response.json();
+                setJob(updatedJob);
+                setMessage('Status updated successfully!');
+            } else {
+                setMessage('Failed to update status.');
+            }
+        } catch (error) {
+            console.error("Status update error:", error);
+            setMessage('A network error occurred.');
+        }
+    };
+
     const styles: { [key: string]: React.CSSProperties } = {
         pageContainer: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f4f7f6' },
         mainContent: { flex: 1, padding: '20px', overflowY: 'auto' },
@@ -104,16 +122,17 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
         assignmentBox: { gridColumn: '1 / -1', marginTop: '10px', display: 'flex', gap: '10px', alignItems: 'center' },
         select: { padding: '8px', fontSize: '1rem', border: '1px solid #ccc', borderRadius: '4px' },
         button: { padding: '8px 16px', fontSize: '1rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
+        technicianActions: { gridColumn: '1 / -1', display: 'flex', gap: '10px', flexWrap: 'wrap' },
+        actionButton: { padding: '10px 20px', fontSize: '1rem', border: 'none', borderRadius: '4px', cursor: 'pointer', color: 'white' }
     };
 
     const isAdmin = user && ['System Admin', 'Department Admin'].includes(user.role);
+    const isAssignedTechnician = user && job && job.technician?.id === user.id;
 
-    // Handle loading, error, and not found states first
     if (loading) return <div style={styles.pageContainer}><Toolbar /><main style={styles.mainContent}><p>Loading job details...</p></main></div>;
     if (error) return <div style={styles.pageContainer}><Toolbar /><main style={styles.mainContent}><p>{error}</p></main></div>;
     if (!job) return <div style={styles.pageContainer}><Toolbar /><main style={styles.mainContent}><p>Job not found.</p></main></div>;
     
-    // Main component return
     return (
         <div style={styles.pageContainer}>
             <Toolbar />
@@ -133,12 +152,7 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
                         <div style={styles.detailItem}><span style={styles.label}>Account Number:</span> {job.Property?.accountNumber}</div>
                         <div style={styles.detailItem}><span style={styles.label}>Address:</span> {job.Property?.streetAddress}</div>
                         <div style={styles.detailItem}><span style={styles.label}>ERF Number:</span> {job.Property?.erfNumber}</div>
-                        <div style={styles.detailItem}><span style={styles.label}>Ward:</span> {job.Property?.ward}</div>
                         
-                        <h2 style={styles.sectionTitle}>Contact Information</h2>
-                        <div style={styles.detailItem}><span style={styles.label}>Property Cellphone:</span> {job.Property?.cellNumber}</div>
-                        <div style={styles.detailItem}><span style={styles.label}>Complainant Cellphone:</span> {job.complainantPhoneNumber || 'N/A'}</div>
-
                         <h2 style={styles.sectionTitle}>Assignment</h2>
                         <div style={styles.detailItem}>
                             <span style={styles.label}>Currently Assigned To:</span> 
@@ -161,6 +175,18 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
                                 </select>
                                 <button onClick={handleAssign} style={styles.button}>Assign</button>
                             </div>
+                        )}
+
+                        {(isAdmin || isAssignedTechnician) && job.status !== 'Completed' && (
+                            <>
+                                <h2 style={styles.sectionTitle}>Technician Actions</h2>
+                                <div style={styles.technicianActions}>
+                                    <button onClick={() => handleStatusUpdate('Departed to Site')} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}>Depart for Site</button>
+                                    <button onClick={() => handleStatusUpdate('On-Site')} style={{...styles.actionButton, backgroundColor: '#007bff'}}>Arrive On Site</button>
+                                    <button onClick={() => handleStatusUpdate('On Hold')} style={{...styles.actionButton, backgroundColor: '#6c757d'}}>Place On Hold</button>
+                                    <button onClick={() => handleStatusUpdate('Completed')} style={{...styles.actionButton, backgroundColor: '#28a745'}}>Complete Job</button>
+                                </div>
+                            </>
                         )}
                         {message && <p>{message}</p>}
                     </div>
