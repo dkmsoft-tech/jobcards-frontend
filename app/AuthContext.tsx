@@ -3,18 +3,14 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { User } from '../types'; // Import the User type
+import { User } from '../types';
 
-// Define the shape of the decoded token
-interface DecodedToken extends User {
-  iat: number;
-  exp: number;
-}
+interface DecodedToken extends User { iat: number; exp: number; }
 
-// Define the shape of the context data
 interface AuthContextType {
   token: string | null;
-  user: User | null; // Add the user object
+  user: User | null;
+  loading: boolean; // <-- ADD THIS
   login: (newToken: string) => void;
   logout: () => void;
 }
@@ -24,13 +20,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true); // <-- ADD THIS
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    if (storedToken) {
-      const decoded = jwtDecode<DecodedToken>(storedToken);
-      setToken(storedToken);
-      setUser({ id: decoded.id, name: decoded.name, role: decoded.role });
+    try {
+      const storedToken = localStorage.getItem('token');
+      if (storedToken) {
+        const decoded = jwtDecode<DecodedToken>(storedToken);
+        setToken(storedToken);
+        setUser({ id: decoded.id, name: decoded.name, role: decoded.role });
+      }
+    } catch (error) {
+      console.error("Invalid token:", error);
+      localStorage.removeItem('token');
+    } finally {
+      setLoading(false); // <-- ADD THIS
     }
   }, []);
 
@@ -48,13 +52,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout }}>
+    <AuthContext.Provider value={{ token, user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook with a runtime check
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

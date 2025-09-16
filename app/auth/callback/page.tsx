@@ -1,12 +1,11 @@
 // app/auth/callback/page.tsx
 'use client';
 
-import React, { useEffect, Suspense } from 'react'; // 1. Import Suspense
+import React, { useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '../../AuthContext';
 
-// 2. Create a new component to contain the client-side logic
-function CallbackClientComponent() {
+function CallbackProcessor() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { login } = useAuth();
@@ -14,16 +13,17 @@ function CallbackClientComponent() {
     useEffect(() => {
         const token = searchParams.get('token');
         if (token) {
-            // We found a token in the URL. Save it and redirect.
             login(token);
-            router.push('/dashboard');
+            // Use router.replace for a cleaner redirect that doesn't
+            // keep the callback page in the browser's history.
+            router.replace('/dashboard');
         } else {
-            // No token found, something went wrong. Redirect to login.
-            router.push('/');
+            console.error("No token found in callback URL");
+            router.replace('/'); // Redirect to login page on error
         }
     }, [searchParams, router, login]);
     
-    // This component doesn't render anything itself, it just handles the logic
+    // While processing, this component renders nothing.
     return null;
 }
 
@@ -33,14 +33,16 @@ export default function AuthCallbackPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            height: '100vh'
+            height: '100vh',
+            fontFamily: 'sans-serif',
+            color: '#333'
         }
     };
     
-    // 3. Wrap the client component in a Suspense boundary
+    // Wrap the processor in a Suspense boundary
     return (
         <Suspense fallback={<div style={styles.loadingContainer}><p>Authenticating, please wait...</p></div>}>
-            <CallbackClientComponent />
+            <CallbackProcessor />
         </Suspense>
     );
 }
