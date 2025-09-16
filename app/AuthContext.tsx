@@ -1,16 +1,21 @@
 // app/AuthContext.tsx
 'use client';
 
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react'; // 1. Import useCallback
 import { jwtDecode } from 'jwt-decode';
 import { User } from '../types';
 
-interface DecodedToken extends User { iat: number; exp: number; }
+// Define the shape of the decoded token
+interface DecodedToken extends User {
+  iat: number;
+  exp: number;
+}
 
+// Define the shape of the context data
 interface AuthContextType {
   token: string | null;
   user: User | null;
-  loading: boolean; // <-- ADD THIS
+  loading: boolean;
   login: (newToken: string) => void;
   logout: () => void;
 }
@@ -20,7 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // <-- ADD THIS
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     try {
@@ -32,24 +37,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Invalid token:", error);
-      localStorage.removeItem('token');
+      localStorage.removeItem('token'); // Clear invalid token
     } finally {
-      setLoading(false); // <-- ADD THIS
+      setLoading(false);
     }
   }, []);
 
-  const login = (newToken: string) => {
+  // 2. Wrap the login function in useCallback
+  const login = useCallback((newToken: string) => {
     localStorage.setItem('token', newToken);
     const decoded = jwtDecode<DecodedToken>(newToken);
     setToken(newToken);
     setUser({ id: decoded.id, name: decoded.name, role: decoded.role });
-  };
+  }, []);
 
-  const logout = () => {
+  // 3. Wrap the logout function in useCallback
+  const logout = useCallback(() => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-  };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ token, user, loading, login, logout }}>
@@ -58,6 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
