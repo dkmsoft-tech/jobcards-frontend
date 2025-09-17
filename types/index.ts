@@ -28,7 +28,7 @@ export interface PropertyDetails {
 export interface Job {
   id: number;
   referenceNumber: string | null;
-  status: 'Pending' | 'On-Site' | 'Completed' | 'On Hold';
+  status: 'Pending' | 'Departed to Site' | 'On-Site' | 'Completed' | 'On Hold';
   createdAt: string;
   Property: {
     streetAddress: string;
