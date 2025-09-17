@@ -5,10 +5,7 @@ import React, { createContext, useState, useContext, useEffect, ReactNode, useCa
 import { jwtDecode } from 'jwt-decode';
 import { User } from '../types';
 
-interface DecodedToken extends User {
-  iat: number;
-  exp: number;
-}
+interface DecodedToken extends User { iat: number; exp: number; }
 
 interface AuthContextType {
   token: string | null;
@@ -30,12 +27,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const storedToken = localStorage.getItem('token');
       if (storedToken) {
         const decoded = jwtDecode<DecodedToken>(storedToken);
-        // Check if token is expired
         if (decoded.exp * 1000 > Date.now()) {
           setToken(storedToken);
           setUser({ id: decoded.id, name: decoded.name, role: decoded.role });
         } else {
-          // Token is expired, remove it
           localStorage.removeItem('token');
         }
       }
@@ -58,13 +53,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-    // Optional: redirect to login page after logout
     window.location.href = '/';
   }, []);
 
   return (
     <AuthContext.Provider value={{ token, user, loading, login, logout }}>
-      {!loading && children}
+      {/* --- THIS IS THE FIX --- */}
+      {/* This ensures the application is always rendered */}
+      {children}
     </AuthContext.Provider>
   );
 };
