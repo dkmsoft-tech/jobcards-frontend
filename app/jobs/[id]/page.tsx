@@ -1,7 +1,7 @@
 // app/jobs/[id]/page.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../AuthContext';
 import Toolbar from '../../../components/Toolbar';
 import { DetailedJob, User as Technician } from '../../../types';
@@ -21,35 +21,35 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
     const [selectedTechnician, setSelectedTechnician] = useState('');
     const [message, setMessage] = useState('');
     
+    const fetchJobDetails = useCallback(async () => {
+        if (!token) return;
+        try {
+            const response = await fetch(`/api/jobs/${params.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                throw new Error('Failed to fetch job details');
+            }
+            const data = await response.json();
+            setJob(data);
+            if (data.technician) {
+                setSelectedTechnician(data.technician.id.toString());
+            }
+        } catch (err) {
+            console.error("Error fetching details:", err);
+            setError('Could not load job details.');
+        } finally {
+            setLoading(false);
+        }
+    }, [token, params.id]); // Add dependencies
+
     useEffect(() => {
         if (!token) {
             router.push('/');
             return;
         }
 
-        const fetchJobDetails = async () => {
-            try {
-                const response = await fetch(`/api/jobs/${params.id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!response.ok) {
-                    throw new Error('Failed to fetch job details');
-                }
-                const data: DetailedJob = await response.json();
-                setJob(data);
-                if (data.technician) {
-                    setSelectedTechnician(data.technician.id.toString());
-                }
-            } catch (err) {
-                console.error("Error fetching details:", err);
-                setError('Could not load job details.');
-            } finally {
-                setLoading(false);
-            }
-        };
-
         const fetchTechs = async () => {
-            // Only fetch the list of technicians if the logged-in user is an admin
             if (user && ['System Admin', 'Department Admin'].includes(user.role)) {
                 try {
                     const response = await fetch('/api/users/technicians', {
@@ -67,7 +67,7 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
 
         fetchJobDetails();
         fetchTechs();
-    }, [token, params.id, router, user]);
+    }, [token, router, user, fetchJobDetails]); // Add fetchJobDetails to dependency array
 
     const handleAssign = async () => {
         if (!selectedTechnician) {
@@ -122,8 +122,8 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
         grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' },
         sectionTitle: { borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px', gridColumn: '1 / -1' },
         detailItem: { marginBottom: '10px' },
-        label: { fontWeight: 'bold', display: 'block', color: '#555', marginBottom: '4px' },
-        assignmentBox: { gridColumn: '1 / -1', marginTop: '10px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' },
+        label: { fontWeight: 'bold', display: 'block' },
+        assignmentBox: { gridColumn: '1 / -1', marginTop: '10px', display: 'flex', gap: '10px', alignItems: 'center' },
         select: { padding: '8px', fontSize: '1rem', border: '1px solid #ccc', borderRadius: '4px' },
         button: { padding: '8px 16px', fontSize: '1rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
         technicianActions: { gridColumn: '1 / -1', display: 'flex', gap: '10px', flexWrap: 'wrap' },
@@ -133,7 +133,6 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
     const isAdmin = user && ['System Admin', 'Department Admin'].includes(user.role);
     const isAssignedTechnician = user && job && job.technician?.id === user.id;
 
-    // Handle loading, error, and not found states first
     if (loading) return <div style={styles.pageContainer}><Toolbar /><main style={styles.mainContent}><p>Loading job details...</p></main></div>;
     if (error) return <div style={styles.pageContainer}><Toolbar /><main style={styles.mainContent}><p>{error}</p></main></div>;
     if (!job) return <div style={styles.pageContainer}><Toolbar /><main style={styles.mainContent}><p>Job not found.</p></main></div>;
@@ -157,6 +156,7 @@ export default function JobDetailsPage({ params }: { params: { id: string } }) {
                         <div style={styles.detailItem}><span style={styles.label}>Account Number:</span> {job.Property?.accountNumber}</div>
                         <div style={styles.detailItem}><span style={styles.label}>Address:</span> {job.Property?.streetAddress}</div>
                         <div style={styles.detailItem}><span style={styles.label}>ERF Number:</span> {job.Property?.erfNumber}</div>
+                        <div style={styles.detailItem}><span style={styles.label}>Ward:</span> {job.Property?.ward}</div>
                         
                         <h2 style={styles.sectionTitle}>Contact Information</h2>
                         <div style={styles.detailItem}><span style={styles.label}>Property Cellphone:</span> {job.Property?.cellNumber}</div>
