@@ -1,13 +1,11 @@
 // types/index.ts
 
-// Defines the shape for a User, including Technicians
 export interface User {
   id: number;
   name: string;
   role: 'Technician' | 'Call Centre Agent' | 'Department Admin' | 'System Admin' | 'Director' | 'Councillor';
 }
 
-// Defines the shape for Property details
 export interface PropertyDetails {
   id: number;
   accountNumber: string;
@@ -24,11 +22,10 @@ export interface PropertyDetails {
   inArrears: boolean | null;
 }
 
-// Defines the basic Job shape for the dashboard list
 export interface Job {
   id: number;
   referenceNumber: string | null;
-  status: 'Pending' | 'Departed to Site' | 'On-Site' | 'Completed' | 'On Hold';
+  status: 'Pending' | 'Assigned' | 'Departed to Site' | 'On-Site' | 'Completed' | 'On Hold';
   createdAt: string;
   Property: {
     streetAddress: string;
@@ -36,18 +33,16 @@ export interface Job {
   JobCategory: {
     name: string;
   } | null;
-  // --- THIS IS THE FIX ---
-  // Ensure the technician object includes the 'id'
   technician: {
     id: number;
     name: string;
   } | null;
 }
 
-// Extends the basic Job shape for the detailed view
 export interface DetailedJob extends Job {
   description: string;
   complainantPhoneNumber: string;
+  complainantName: string;
   creator: { name: string; } | null;
   Property: PropertyDetails | null;
 }

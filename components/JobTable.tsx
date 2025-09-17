@@ -12,14 +12,13 @@ interface JobTableProps {
 export default function JobTable({ jobs }: JobTableProps) {
   const router = useRouter();
 
-  // This function will be called when a user clicks on a table row
   const handleRowClick = (jobId: number) => {
     router.push(`/jobs/${jobId}`);
   };
 
   const styles: { [key: string]: React.CSSProperties } = {
     table: { width: '100%', borderCollapse: 'collapse', backgroundColor: '#ffffff' },
-    tr: { cursor: 'pointer' }, // Make the row look clickable
+    tr: { cursor: 'pointer' },
     th: {
       padding: '12px 15px',
       textAlign: 'left',
@@ -42,7 +41,9 @@ export default function JobTable({ jobs }: JobTableProps) {
   const getStatusColor = (status: Job['status']) => {
     switch (status) {
       case 'Pending': return '#ffc107'; // Yellow
-      case 'On-Site': return '#007bff'; // Blue
+      case 'Assigned': return '#17a2b8'; // Teal/Info Blue
+      case 'Departed to Site': return '#007bff'; // Blue
+      case 'On-Site': return '#6610f2'; // Indigo
       case 'Completed': return '#28a745'; // Green
       case 'On Hold': return '#6c757d'; // Grey
       default: return '#6c757d';
@@ -62,7 +63,6 @@ export default function JobTable({ jobs }: JobTableProps) {
       </thead>
       <tbody>
         {jobs.map(job => (
-          // Add the onClick handler to each table row
           <tr key={job.id} onClick={() => handleRowClick(job.id)} style={styles.tr}>
             <td style={styles.td}>{job.referenceNumber || `ID: ${job.id}`}</td>
             <td style={styles.td}>{job.JobCategory?.name || 'N/A'}</td>
