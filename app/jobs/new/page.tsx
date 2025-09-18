@@ -188,6 +188,7 @@ export default function NewJobPage() {
                             )}
                         </div>
                     )}
+
                     {step === 2 && selectedProperty && (
                         <div>
                             <h1>Step 2: Log Details</h1>
