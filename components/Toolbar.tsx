@@ -5,16 +5,19 @@ import React from 'react';
 import { useAuth } from '../app/AuthContext';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link'; // Import Link for navigation
+import Link from 'next/link';
 
 export default function Toolbar() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
 
   const handleLogout = () => {
     logout();
-    router.push('/');
+    // The logout function in AuthContext will handle the redirect.
   };
+
+  // Check if the current user has a role that is allowed to create jobs
+  const canCreateJobs = user && ['System Admin', 'Department Admin', 'Call Centre Agent'].includes(user.role);
 
   const styles: { [key: string]: React.CSSProperties } = {
     toolbar: {
@@ -40,6 +43,11 @@ export default function Toolbar() {
       padding: '5px 10px',
       textDecoration: 'none',
       color: 'inherit'
+    },
+    nonClickable: {
+        cursor: 'default',
+        padding: '5px 10px',
+        color: '#6c757d'
     }
   };
 
@@ -54,8 +62,11 @@ export default function Toolbar() {
         />
       </div>
       <div style={styles.menuItems}>
-        <Link href="/jobs/new" style={styles.menuItem}><b>File</b></Link>
-        <div style={styles.menuItem}><b>View</b></div>
+        {/* This link is now only visible to users with permission */}
+        {canCreateJobs && (
+            <Link href="/jobs/new" style={styles.menuItem}><b>File</b></Link>
+        )}
+        <div style={styles.nonClickable}><b>View</b></div>
         <div style={styles.menuItem} onClick={handleLogout}><b>Logout</b></div>
       </div>
     </div>

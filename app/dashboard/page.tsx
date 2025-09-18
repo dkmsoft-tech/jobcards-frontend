@@ -9,19 +9,16 @@ import Toolbar from '../../components/Toolbar';
 import StatCard from '../../components/StatCard';
 import JobTable from '../../components/JobTable';
 import { Job } from '../../types';
+import ProtectedRoute from '../../components/ProtectedRoute';
 
 export default function Dashboard() {
-  const { token, logout, loading } = useAuth();
+  const { token, user, logout } = useAuth();
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (loading) return;
-    if (!token) {
-      router.push('/');
-      return;
-    }
+    if (!token) return;
 
     const fetchJobs = async () => {
       try {
@@ -35,8 +32,6 @@ export default function Dashboard() {
         const data: Job[] = await response.json();
         setJobs(data);
       } catch (err) {
-        // --- THIS IS THE FIX ---
-        // We check if 'err' is an instance of Error before using its message property.
         if (err instanceof Error) {
           console.error("Error fetching jobs:", err);
           setError(err.message);
@@ -47,8 +42,10 @@ export default function Dashboard() {
     };
 
     fetchJobs();
-  }, [token, router, logout, loading]);
-
+  }, [token, logout]);
+  
+  const canCreateJobs = user && ['System Admin', 'Department Admin', 'Call Centre Agent'].includes(user.role);
+  
   const totalJobs = jobs.length;
   const pendingJobs = jobs.filter(job => job.status === 'Pending').length;
   const onSiteJobs = jobs.filter(job => job.status === 'On-Site').length;
@@ -64,34 +61,30 @@ export default function Dashboard() {
     errorText: { color: 'red', fontWeight: 'bold' }
   };
   
-  if (loading) {
-      return <p>Loading...</p>;
-  }
-
   return (
-    <div style={styles.dashboardContainer}>
-      <Toolbar />
-      <main style={styles.mainContent}>
-        <h1>Dashboard</h1>
-        <div style={styles.statsContainer}>
-          <StatCard title="Total" value={totalJobs} />
-          <StatCard title="Pending" value={pendingJobs} />
-          <StatCard title="On Site" value={onSiteJobs} />
-          <StatCard title="Completed" value={completedJobs} />
-        </div>
-        <div style={styles.jobListContainer}>
-          <div style={styles.jobListHeader}>
-            <h2>Recent Jobs</h2>
-            <Link href="/jobs/new" style={styles.createJobButton}>Create New Job</Link>
+    <ProtectedRoute allowedRoles={['System Admin', 'Department Admin', 'Call Centre Agent', 'Technician', 'Director', 'Councillor']}>
+      <div style={styles.dashboardContainer}>
+        <Toolbar />
+        <main style={styles.mainContent}>
+          <h1>Dashboard</h1>
+          <div style={styles.statsContainer}>
+            <StatCard title="Total" value={totalJobs} />
+            <StatCard title="Pending" value={pendingJobs} />
+            <StatCard title="On Site" value={onSiteJobs} />
+            <StatCard title="Completed" value={completedJobs} />
           </div>
-          {error && <p style={styles.errorText}>{error}</p>}
-          {jobs.length > 0 ? (
-            <JobTable jobs={jobs} />
-          ) : (
-            <p>No jobs found.</p>
-          )}
-        </div>
-      </main>
-    </div>
+          <div style={styles.jobListContainer}>
+            <div style={styles.jobListHeader}>
+              <h2>Recent Jobs</h2>
+              {canCreateJobs && (
+                <Link href="/jobs/new" style={styles.createJobButton}>Create New Job</Link>
+              )}
+            </div>
+            {error && <p style={styles.errorText}>{error}</p>}
+            {jobs.length > 0 ? ( <JobTable jobs={jobs} /> ) : ( <p>No jobs found.</p> )}
+          </div>
+        </main>
+      </div>
+    </ProtectedRoute>
   );
 }
